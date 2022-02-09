@@ -1,5 +1,6 @@
 from Clients.Base_Client import Base_Client
 from torch import optim
+from torch import nn
 
 class FedAvgClient(Base_Client):
     def __init__(self, model, dataloader, learning_rate = 0.01):
