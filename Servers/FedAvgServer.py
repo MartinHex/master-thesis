@@ -1,4 +1,5 @@
-from Server.ABCServer import ABCServer
+from Servers.ABCServer import ABCServer
+import torch
 
 class FedAvgServer(ABCServer):
 
