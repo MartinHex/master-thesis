@@ -2,16 +2,15 @@ from abc import ABC,abstractmethod
 
 class ABCServer(ABC):
 
-    def __init__(self,architecture):
-        super.init()
-        self.model = architecture
+    def __init__(self,model):
+        self.model = model
 
     @abstractmethod
-    def aggregate(clients):
+    def aggregate(self, clients):
         pass
 
-    def get_weights():
-        return self.architecture.get_weights()
+    def get_weights(self):
+        return self.model.get_weights()
 
-    def set_weights(weights):
-        self.architecture.set_weights(weights)
+    def set_weights(self, weights):
+        self.model.set_weights(weights)

@@ -3,7 +3,7 @@ import copy
 
 class MNIST_Architecture(nn.Module):
     def __init__(self):
-        super(CNN_model, self).__init__()
+        super(MNIST_Architecture, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(
                 in_channels=1,
@@ -30,8 +30,8 @@ class MNIST_Architecture(nn.Module):
         output = self.out(x)
         return output, x    # return x for visualization
 
-    def get_weights():
-        return self.state_dict()
+    def get_weights(self):
+        return  copy.deepcopy(self.state_dict())
 
-    def set_weights(model_state):
-        self.load_state_dict( copy.deepcopy(model_state))
+    def set_weights(self, model_state):
+        self.load_state_dict(copy.deepcopy(model_state))
