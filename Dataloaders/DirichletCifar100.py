@@ -47,6 +47,8 @@ class DirichletCifar100(FederatedDataLoader):
         self.trainset = torchvision.datasets.CIFAR100(root= './data', train = True, download = download, transform = self.transform)
         self.testset = torchvision.datasets.CIFAR100(root = './data', train = False, download = download, transform = self.transform)
 
+        assert len(self.trainset) % self.number_of_clients == 0, "Number of clients must be evenly devicible with the length of the dataset, length of the dataset is {}".format(len(self.trainset))
+
         self.split_trainset = self._create_trainset()
 
     def get_training_raw_data(self):
