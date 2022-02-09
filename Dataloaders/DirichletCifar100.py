@@ -152,14 +152,12 @@ class DirichletCifar100(FederatedDataLoader):
         map(lambda x: x/s, theta)
 
 class ImageDataset(Dataset):
-
-    #def __init__(self, root, transform, dog_label=1, cat_label=0):
     def __init__(self, data, label):
         """Constructor
 
         Args:
-            root (Path/str): Filepath to the data root, e.g. './small_train'
-            transform (Compose): A composition of image transforms, see below.
+            data: list of data for the dataset.
+            label: whether to use the coarse or fine label in the cifar 100 dataset, options are "fine" or "coarse".
         """
         self.data = data
         self.label = label
