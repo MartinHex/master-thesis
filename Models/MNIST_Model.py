@@ -42,7 +42,7 @@ class MNIST_Model(nn.Module):
             # calculate the loss
             loss = loss_func(output[0], target)
             # update running validation loss
-            server_loss += loss.item()
+            server_loss += loss.item()/data.size(0)
         server_loss = server_loss/len(dataloader)
         return server_loss
 
