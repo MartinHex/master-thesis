@@ -7,11 +7,22 @@ from torch.utils.data import DataLoader
 from Dataloaders.federated_dataloader import FederatedDataLoader
 
 class DirichletCifar100(FederatedDataLoader):
-    '''
+    '''Federated wrapper class for the Torchvision CIFAR100 dataset
+
         Use a heirichical Dirichlet sampling to sample natural clients of the CIFAR-100 dataset, as proposed
-        by Reddi et al. (https://arxiv.org/pdf/2003.00295.pdf)
+        by Reddi et al. (https://arxiv.org/pdf/2003.00295.pdf).
+        Note when alpha and beta go to infinity we obtain a uniform distribution of data.
     '''
     def __init__(self, number_of_clients, alpha = 0.1, beta = 10, download = True):
+        """Constructor
+
+        Args:
+            number_of_clients: how many federated clients to split the data into (int).
+            alpha: dirichelt parameter for the selection of coarse label probabilities (float).
+            beta: dirichlet parameter for the selection of fine label probabilities (float).
+            download: whether to allow torchvision to download the dataset (default: True)
+
+        """
         self.transform = transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -58,6 +69,15 @@ class DirichletCifar100(FederatedDataLoader):
         return None
 
     def get_training_dataloaders(self, batch_size, shuffle = True,  label = 'fine'):
+        """Get a list of dataloaders containing partitioned training data from the MNIST dataset
+
+        Args:
+            batch_size: batch_size for the dataloaders (int).
+            shuffle: whether to shuffle the data (Boolean).
+            label: whether to use the coarse or fine label in the CIFAR100 dataset (fine/coarse)
+        Returns:
+            List of dataloaders with data in format (Tensor, int).
+        """
         datasets = []
         for client in self.split_trainset:
             datasets.append(ImageDataset(client, label))
@@ -67,7 +87,15 @@ class DirichletCifar100(FederatedDataLoader):
 
         return dataloaders
 
-    def get_test_dataloader(self):
+    def get_test_dataloader(self,  label = 'fine'):
+        """Get a dataloader containing training data from the MNIST dataset
+
+        Args:
+            batch_size: batch_size for the dataloaders (int).
+            label: whether to use the coarse or fine label in the CIFAR100 dataset (fine/coarse)
+        Returns:
+            Dataloader with data in format (Tensor, int).
+        """
         return None
 
 

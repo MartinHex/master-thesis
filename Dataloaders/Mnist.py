@@ -5,7 +5,18 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
 class Mnist(FederatedDataLoader):
+    """Federated wrapper class for the Torchvision MNIST dataset
+
+    The class splits the MNIST training data into the desired amount of client with a uniform distribution.
+    """
     def __init__(self, number_of_clients,  download = True):
+        """Constructor
+
+        Args:
+            number_of_clients: how many federated clients to split the data into (int).
+            download: whether to allow torchvision to download the dataset (default: True)
+
+        """
         self.transform = torchvision.transforms.Compose(
             [torchvision.transforms.ToTensor()
             ])
@@ -25,7 +36,7 @@ class Mnist(FederatedDataLoader):
             dataloaders.append(DataLoader(ImageDataset(client), batch_size = batch_size, shuffle = shuffle))
         return dataloaders
 
-    def get_test_dataloader(self):
+    def get_test_dataloader(self, batch_size):
         return None
 
     def get_training_raw_data(self):
