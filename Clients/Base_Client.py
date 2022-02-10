@@ -12,3 +12,6 @@ class Base_Client(ABC):
 
     def set_weights(self, model_state):
         self.model.set_weights(model_state)
+
+    def evaluate(self, dataloader):
+        return self.model.evaluate(dataloader)

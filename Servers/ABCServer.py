@@ -18,3 +18,6 @@ class ABCServer(ABC):
     def push_weights(self, clients):
         for client in clients:
             client.set_weights(self.model.get_weights())
+
+    def evaluate(self, dataloader):
+        return self.model.evaluate(dataloader)
