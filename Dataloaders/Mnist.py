@@ -24,9 +24,10 @@ class Mnist(FederatedDataLoader):
         self.number_of_clients = number_of_clients
 
         self.trainset = torchvision.datasets.MNIST(root= './data', train = True, download = download, transform = self.transform)
-        self.testset = torchvision.datasets.MNIST(root = './data', train = False, download = download, transform = self.transform)
 
         assert len(self.trainset) % self.number_of_clients == 0, "Number of clients must be evenly devicible with the length of the dataset, length of the dataset is {}".format(len(self.trainset))
+
+        self.testset = [(x, y) for x, y in torchvision.datasets.MNIST(root = './data', train = False, download = download, transform = self.transform)]
 
         self.split_trainset = self._create_trainset()
 
@@ -37,13 +38,13 @@ class Mnist(FederatedDataLoader):
         return dataloaders
 
     def get_test_dataloader(self, batch_size):
-        return None
+        return DataLoader(ImageDataset(self.testset), batch_size = batch_size, shuffle = False)
 
     def get_training_raw_data(self):
         return self.split_trainset
 
     def get_test_raw_data(self):
-        return None
+        return self.testset
 
     # Split the dataset into clients, if we want to make the dataset non-iid this is where we'd do that.
     def _create_trainset(self):

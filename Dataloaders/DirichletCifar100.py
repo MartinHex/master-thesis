@@ -28,6 +28,17 @@ class DirichletCifar100(FederatedDataLoader):
              transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
             ])
 
+        self.map_fine_to_coarse_label = [4,  1, 14,  8,  0,  6,  7,  7, 18,  3,
+                                   3, 14,  9, 18,  7, 11,  3,  9,  7, 11,
+                                   6, 11,  5, 10,  7,  6, 13, 15,  3, 15,
+                                   0, 11,  1, 10, 12, 14, 16,  9, 11,  5,
+                                   5, 19,  8,  8, 15, 13, 14, 17, 18, 10,
+                                   16, 4, 17,  4,  2,  0, 17,  4, 18, 17,
+                                   10, 3,  2, 12, 12, 16, 12,  1,  9, 19,
+                                   2, 10,  0,  1, 16, 12,  9, 13, 15, 13,
+                                  16, 19,  2,  4,  6, 19,  5,  5,  8, 19,
+                                  18,  1,  2, 15,  6,  0, 17,  8, 14, 13]
+
         self.map_coarse_to_fine_label = {
             0: [4, 30, 55, 72, 95], # 0
             1: [1, 32, 67, 73, 91], # 1
@@ -56,9 +67,10 @@ class DirichletCifar100(FederatedDataLoader):
         self.beta = beta
 
         self.trainset = torchvision.datasets.CIFAR100(root= './data', train = True, download = download, transform = self.transform)
-        self.testset = torchvision.datasets.CIFAR100(root = './data', train = False, download = download, transform = self.transform)
 
         assert len(self.trainset) % self.number_of_clients == 0, "Number of clients must be evenly devicible with the length of the dataset, length of the dataset is {}".format(len(self.trainset))
+
+        self.testset = [(x, self.map_fine_to_coarse_label[y], y) for x, y in torchvision.datasets.CIFAR100(root = './data', train = False, download = download, transform = self.transform)]
 
         self.split_trainset = self._create_trainset()
 
@@ -76,7 +88,7 @@ class DirichletCifar100(FederatedDataLoader):
         Returns:
             List of the test data on the format of Image Tensor, coarse label and finally fine label (Tensor, int, int)
         """
-        return None
+        return self.testset
 
     def get_training_dataloaders(self, batch_size, shuffle = True,  label = 'fine'):
         """Get a list of dataloaders containing partitioned training data from the MNIST dataset
@@ -97,7 +109,7 @@ class DirichletCifar100(FederatedDataLoader):
 
         return dataloaders
 
-    def get_test_dataloader(self,  label = 'fine'):
+    def get_test_dataloader(self, batch_size, label = 'fine'):
         """Get a dataloader containing training data from the MNIST dataset
 
         Args:
@@ -106,7 +118,7 @@ class DirichletCifar100(FederatedDataLoader):
         Returns:
             Dataloader with data in format (Tensor, int).
         """
-        return None
+        return DataLoader(ImageDataset(self.testset, label = label), batch_size = batch_size, shuffle = False)
 
 
 
