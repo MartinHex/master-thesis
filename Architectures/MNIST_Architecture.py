@@ -31,7 +31,7 @@ class MNIST_Architecture(nn.Module):
         output = self.out(x)
         return output, x    # return x for visualization
 
-    def eval(self,dataloader,loss_func):
+    def evaluate(self,dataloader,loss_func = nn.CrossEntropyLoss()):
         self.eval() # prep model for evaluation
         server_loss = 0
         for data, target in dataloader:
