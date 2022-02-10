@@ -41,7 +41,7 @@ class MNIST_Architecture(nn.Module):
             loss = loss_func(output[0], target)
             # update running validation loss
             server_loss += loss.item()
-        server_loss = server_loss/len(centralized_loader)
+        server_loss = server_loss/len(dataloader)
         return server_loss
 
     def get_weights(self):
