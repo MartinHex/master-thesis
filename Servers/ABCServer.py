@@ -14,3 +14,7 @@ class ABCServer(ABC):
 
     def set_weights(self, weights):
         self.model.set_weights(weights)
+
+    def push_weights(self, clients):
+        for client in clients:
+            client.set_weights(self.model.get_weights())

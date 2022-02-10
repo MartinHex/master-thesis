@@ -11,8 +11,3 @@ class FedAvgServer(ABCServer):
             client_tensor = [state[key] for state in client_weights]
             server_weights[key] = torch.stack(client_tensor, dim=0).sum(dim=0)/n_clients
         self.set_weights(server_weights)
-
-    def push_weights(self, clients):
-        for client in clients:
-            client.set_weights(self.model.get_weights())
-        

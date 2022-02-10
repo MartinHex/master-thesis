@@ -3,7 +3,7 @@ import copy
 
 class MNIST_Architecture(nn.Module):
     def __init__(self):
-        super(MNIST_Architecture, self).__init__()
+        super().__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(
                 in_channels=1,
@@ -22,6 +22,7 @@ class MNIST_Architecture(nn.Module):
         )
         # fully connected layer, output 10 classes
         self.out = nn.Linear(32 * 7 * 7, 10)
+
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
@@ -29,6 +30,19 @@ class MNIST_Architecture(nn.Module):
         x = x.view(x.size(0), -1)
         output = self.out(x)
         return output, x    # return x for visualization
+
+    def eval(self,dataloader,loss_func):
+        self.eval() # prep model for evaluation
+        server_loss = 0
+        for data, target in dataloader:
+            # forward pass: compute predicted outputs by passing inputs to the model
+            output = self(data)
+            # calculate the loss
+            loss = loss_func(output[0], target)
+            # update running validation loss
+            server_loss += loss.item()
+        server_loss = server_loss/len(centralized_loader)
+        return server_loss
 
     def get_weights(self):
         return  copy.deepcopy(self.state_dict())
