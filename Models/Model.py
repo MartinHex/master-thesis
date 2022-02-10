@@ -1,6 +1,6 @@
 from abc import ABC
 
-class Architecture(ABC):
+class Model(ABC):
     def __init__():
         self.super()
 

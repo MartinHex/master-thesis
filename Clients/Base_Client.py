@@ -3,9 +3,8 @@ class Base_Client(ABC):
     def __init__(self, model):
         self.model = model
 
-    @abstractmethod
     def train(self):
-        pass
+        self.model.train_model(self.dataloader,self.optimizer,epochs = 1)
 
     def get_weights(self):
         return self.model.get_weights()

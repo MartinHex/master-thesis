@@ -1,4 +1,4 @@
-from Architectures.MNIST_Architecture import MNIST_Architecture
+from Models.MNIST_Model import MNIST_Model
 from Dataloaders.Mnist import Mnist
 from Algorithms.FedAvg import FedAvg
 
@@ -21,6 +21,6 @@ callbacks = [
     client_loss,
     server_loss,
 ]
-alg = FedAvg(dataloader=mnist, Architecture=MNIST_Architecture, callbacks = callbacks, n_clients=5)
+alg = FedAvg(dataloader=mnist, Model=MNIST_Model, callbacks = callbacks, n_clients=5)
 
 alg.run(1)

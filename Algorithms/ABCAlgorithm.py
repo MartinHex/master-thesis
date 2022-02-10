@@ -2,10 +2,10 @@ from abc import ABC,abstractmethod
 
 class ABCAlgorithm(ABC):
 
-    def __init__(self,n_clients,dataloader,Architecture,callbacks):
+    def __init__(self,n_clients,dataloader,Model,callbacks):
         self.n_clients=n_clients
         self.dataloader=dataloader
-        self.Architecture = Architecture
+        self.Model = Model
         self.callbacks = callbacks
 
     def run(self,iterations):
