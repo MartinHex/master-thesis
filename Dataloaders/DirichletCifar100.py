@@ -63,9 +63,19 @@ class DirichletCifar100(FederatedDataLoader):
         self.split_trainset = self._create_trainset()
 
     def get_training_raw_data(self):
+        """Get the training data in the same partition as in the dataloaders but in form of lists of Tensors
+
+        Returns:
+            List of list with each list containing the data for one client on the format of Image Tensor, coarse label and finally fine label (Tensor, int, int)
+        """
         return self.split_trainset
 
     def get_test_raw_data(self):
+        """Get the test data in the form of a list of Tensors
+
+        Returns:
+            List of the test data on the format of Image Tensor, coarse label and finally fine label (Tensor, int, int)
+        """
         return None
 
     def get_training_dataloaders(self, batch_size, shuffle = True,  label = 'fine'):
