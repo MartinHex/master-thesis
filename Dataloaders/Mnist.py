@@ -5,7 +5,18 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
 class Mnist(FederatedDataLoader):
+    """Federated wrapper class for the Torchvision MNIST dataset
+
+    The class splits the MNIST training data into the desired amount of client with a uniform distribution.
+    """
     def __init__(self, number_of_clients,  download = True):
+        """Constructor
+
+        Args:
+            number_of_clients: how many federated clients to split the data into (int).
+            download: whether to allow torchvision to download the dataset (default: True)
+
+        """
         self.transform = torchvision.transforms.Compose(
             [torchvision.transforms.ToTensor()
             ])
@@ -13,9 +24,10 @@ class Mnist(FederatedDataLoader):
         self.number_of_clients = number_of_clients
 
         self.trainset = torchvision.datasets.MNIST(root= './data', train = True, download = download, transform = self.transform)
-        self.testset = torchvision.datasets.MNIST(root = './data', train = False, download = download, transform = self.transform)
 
         assert len(self.trainset) % self.number_of_clients == 0, "Number of clients must be evenly devicible with the length of the dataset, length of the dataset is {}".format(len(self.trainset))
+
+        self.testset = [(x, y) for x, y in torchvision.datasets.MNIST(root = './data', train = False, download = download, transform = self.transform)]
 
         self.split_trainset = self._create_trainset()
 
@@ -25,14 +37,14 @@ class Mnist(FederatedDataLoader):
             dataloaders.append(DataLoader(ImageDataset(client), batch_size = batch_size, shuffle = shuffle))
         return dataloaders
 
-    def get_test_dataloader(self):
-        return None
+    def get_test_dataloader(self, batch_size):
+        return DataLoader(ImageDataset(self.testset), batch_size = batch_size, shuffle = False)
 
     def get_training_raw_data(self):
         return self.split_trainset
 
     def get_test_raw_data(self):
-        return None
+        return self.testset
 
     # Split the dataset into clients, if we want to make the dataset non-iid this is where we'd do that.
     def _create_trainset(self):
