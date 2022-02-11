@@ -1,0 +1,17 @@
+name: thesis
+channels:
+- defaults
+- pytorch
+dependencies:
+  - python
+  - pip
+  - numpy
+  - pandas
+  - jupyter
+  - matplotlib
+  - seaborn
+  - pytorch
+  - torchvision
+  - h5py
+  - pip:
+    - tqdm
