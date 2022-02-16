@@ -1,4 +1,5 @@
 from abc import ABC,abstractmethod
+from torch import nn
 
 class ABCServer(ABC):
 
@@ -19,5 +20,5 @@ class ABCServer(ABC):
         for client in clients:
             client.set_weights(self.model.get_weights())
 
-    def evaluate(self, dataloader):
-        return self.model.evaluate(dataloader)
+    def evaluate(self, dataloader, loss_func=nn.CrossEntropyLoss()):
+        return self.model.evaluate(dataloader, loss_func)

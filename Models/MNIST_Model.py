@@ -33,7 +33,7 @@ class MNIST_Model(nn.Module):
         output = self.out(x)
         return output, x    # return x for visualization
 
-    def evaluate(self,dataloader,loss_func=nn.CrossEntropyLoss()):
+    def evaluate(self,dataloader,loss_func):
         self.eval() # prep model for evaluation
         server_loss = 0
         for data, target in dataloader:
