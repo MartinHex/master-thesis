@@ -1,6 +1,4 @@
 from Dataloaders.federated_dataloader import FederatedDataLoader
-#import torchvision
-#import numpy as np
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 import os
