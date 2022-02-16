@@ -23,4 +23,4 @@ callbacks = [
 ]
 alg = FedAvg(dataloader=mnist, Model=MNIST_Model, callbacks = callbacks, n_clients=5)
 
-alg.run(1)
+alg.run(2)
