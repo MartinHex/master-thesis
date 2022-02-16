@@ -10,10 +10,11 @@ class ABCAlgorithm(ABC):
 
     def run(self,iterations):
         for round in range(iterations):
+            print('---------------- Round {} ----------------'.format(round + 1))
             for client in self.clients:
                 loss = client.train()
-        self.server.aggregate(self.clients)
-        if(self.callbacks != None):
-            for callback in self.callbacks:
-                callback(self)
-        self.server.push_weights(self.clients)
+            self.server.aggregate(self.clients)
+            if(self.callbacks != None):
+                for callback in self.callbacks:
+                    callback(self)
+            self.server.push_weights(self.clients)
