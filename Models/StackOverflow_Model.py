@@ -37,11 +37,11 @@ class StackOverflow_Model(nn.Module):
     def evaluate(self,dataloader,loss_func=nn.CrossEntropyLoss()):
         self.eval() # prep model for evaluation
         server_loss = 0
+        state_h, state_c = self.init_state()
         for data, target in dataloader:
             # forward pass: compute predicted outputs by passing inputs to the model
-            output = self(data)
-            # calculate the loss
-            loss = loss_func(output[0], target)
+            y_pred, (state_h, state_c) = self(x, (state_h, state_c))
+            loss = loss_func(y_pred.transpose(1, 2), y)
             # update running validation loss
             server_loss += loss.item()/data.size(0)
         server_loss = server_loss/len(dataloader)

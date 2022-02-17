@@ -56,8 +56,8 @@ class StackOverflow(FederatedDataLoader):
 
         # Add placeholder indicies to data.
         self.vocab.add('OoV')
-        self.vocab.add('BoC')
-        self.vocab.add('EoC')
+        self.vocab.add('BoS')
+        self.vocab.add('EoS')
         self.vocab.add('Pad')
 
         # Preproccess data for the current vocab
@@ -98,7 +98,7 @@ class StackOverflow(FederatedDataLoader):
         for i,w in enumerate(sentence):
             if(w not in self.vocab):
                 sentence[i] = 'OoV'
-        res_seq = ['BoC']+sentence+['EoC']
+        res_seq = ['BoS']+sentence+['EoS']
         remaining_space = n_words-len(res_seq)+1
         if(remaining_space>0):
             res_seq= ['Pad']*remaining_space+res_seq
@@ -106,54 +106,6 @@ class StackOverflow(FederatedDataLoader):
         # +1 to get 20 word sentence input and output.
         return res_seq[:(n_words+1)]
 
-
-
-
-
-
-# def downloadStackOverflow(root='./',n_entries=128,n_words=20,n_clients=10000):
-#     """
-#         Downloads stackoverflow data through tensorflow_federated.
-#         This data is then translated into a pytorch formal.
-#
-#     """
-#     print("Downloading and translation of StackOverflow may take a while.")
-#     print("Observe that TFF is only supported on linux systems.")
-#     import tensorflow_federated as tff
-#     import tensorflow_datasets as tfds
-#
-#     # Load data
-#     (train, held_out, test) = tff.simulation.datasets.stackoverflow.load_data(
-#         cache_dir=None
-#     )
-#     n_entries = 128
-#     n_words = 20
-#     res = {}
-#     for user_id in train.client_ids:
-#       user_entries = tfds.as_numpy(train.create_tf_dataset_for_client(user_id))
-#       usr_data = [{} for _ in range(n_entries)]
-#       ix = 0
-#       for entry in user_entries:
-#         text = entry['tokens'].decode("utf-8")
-#         text = ''.join([t for t in text if t.isalpha() or t==" "])
-#         text = text.split(" ")
-#         entry['tokens'] = [t for t in text if t!=''][:n_words]
-#         if(len(entry['tokens'])==20):
-#           entry['creation_date'] = entry['creation_date'].decode("utf-8")
-#           entry['tags'] = entry['tags'].decode("utf-8")
-#           entry['type'] = entry['type'].decode("utf-8")
-#           entry['title'] = entry['title'].decode("utf-8")
-#           entry['score'] = int(entry['score'])
-#           usr_data[ix] = dict(entry)
-#           if(ix+1==n_entries):
-#             res[user_id] = usr_data
-#             break
-#           ix+=1
-#       if(len(list(res))==n_clients):
-#           outputpath = os.path.join(root,'userEntries_%i_%i.json'%(n_entries,n_words))
-#           with open(outputpath,'w', encoding='utf-8') as f:
-#               json.dump(res, f,ensure_ascii=False)
-#           break
 
 def downloadStackOverflow(root='./',n_entries=128,n_clients=10000):
     """
