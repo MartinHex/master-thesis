@@ -28,4 +28,6 @@ TODO: Make the download of EMNIST-62 more dynamic such that it download to the c
 
 ## Stack Overflow
 
-TODO
+The StackOverflow dataloader contains text entries from different users from the [Stack Overflow](https://stackoverflow.com). This data is first downloaded through [Tensorflow-Federated](https://www.tensorflow.org/federated) (TFF) and later pre-processed into pytorch data loaders. Observe that TFF is only supported on linux devices as currently is built on [JAX](https://github.com/google/jax) which is why this project is not built around TFF. In TFF basic pre-processing is also done, removing link references, making all letters lower case etc. In this dataloader we further preprocess the data and set the amount of words in each sentence to `n_words` and comments to `n_entries`. This is to limit memory allocation which in comparisson to TFF requires a lot of diskspace (60GB approximately). Doing so we only collect data from 10000 users and store this results as `./data/StackOverflow/userEntries_{n_entries}_{n_words}.json` which only takes up 0.5 GB approximately. This json file is then used to for the dataloader, selecting `number of clients` from random samples from this file and `number of clients` for testing. This limits the amount of users to 5000, which can be easily modified for work requiring larger amount of clients.
+
+This data is inheritely non-iid as different users write differently. The dataloaders are designed for Next-Word-Prediction RNN models, providing user entry and following words to the network.
