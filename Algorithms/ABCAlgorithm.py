@@ -9,6 +9,7 @@ class ABCAlgorithm(ABC):
         self.callbacks = callbacks
 
     def run(self,iterations):
+        self.server.push_weights(self.clients)
         for round in range(iterations):
             print('---------------- Round {} ----------------'.format(round + 1))
             for client in self.clients:
