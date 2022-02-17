@@ -29,7 +29,7 @@ class StackOverflow(FederatedDataLoader):
         """
         root = os.path.join('data')
         data_path = os.path.join(root,'Stackoverflow')
-        usr_cmnts_pth = os.path.join(data_path,'userComments_%i_%i.json'%(n_entries,n_words))
+        usr_cmnts_pth = os.path.join(data_path,'userEntries_%i_%i.json'%(n_entries,n_words))
 
         self.number_of_clients = number_of_clients
 
@@ -132,7 +132,7 @@ def downloadStackOverflow(root='./',n_entries=128,n_words=20,n_clients=10000):
             break
           ix+=1
       if(len(list(res))==n_clients):
-          outputpath = os.path.join(root,'userComments_%i_%i.json'%(n_entries,n_words))
+          outputpath = os.path.join(root,'userEntries_%i_%i.json'%(n_entries,n_words))
           with open(outputpath,'w', encoding='utf-8') as f:
               json.dump(res, f,ensure_ascii=False)
           break

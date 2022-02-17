@@ -51,7 +51,6 @@ class StackOverflow_Model(nn.Module):
         self.train()
         for epoch in range(epochs):
             state_h, state_c = self.init_state()
-
             for batch, (x, y) in enumerate(dataloader):
                 # gives batch data, normalize x when iterate train_loader
                 y_pred, (state_h, state_c) = self(x, (state_h, state_c))
@@ -65,6 +64,8 @@ class StackOverflow_Model(nn.Module):
                 optimizer.step()
                 print({ 'epoch': epoch, 'batch': batch, 'loss': loss.item() })
         return loss.item()
+
+
 
     def get_weights(self):
         return  copy.deepcopy(self.state_dict())
