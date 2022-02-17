@@ -2,16 +2,16 @@ import torch
 from torch import nn,optim
 import argparse
 import numpy as np
+import copy
 
 class StackOverflow_Model(nn.Module):
-    def __init__(self, vocab,sequence_length):
+    def __init__(self, n_vocab=10004,sequence_length=20):
         super().__init__()
         self.lstm_size = 670
         self.embedding_dim = 96
         self.num_layers = 1
         self.sequence_length = sequence_length
 
-        n_vocab = len(vocab)
         self.embedding = nn.Embedding(
             num_embeddings=n_vocab,
             embedding_dim=self.embedding_dim,
@@ -36,16 +36,16 @@ class StackOverflow_Model(nn.Module):
 
     def evaluate(self,dataloader,loss_func=nn.CrossEntropyLoss()):
         self.eval() # prep model for evaluation
-        server_loss = 0
+        avg_loss = 0
         state_h, state_c = self.init_state()
-        for data, target in dataloader:
+        for x,y in dataloader:
             # forward pass: compute predicted outputs by passing inputs to the model
             y_pred, (state_h, state_c) = self(x, (state_h, state_c))
             loss = loss_func(y_pred.transpose(1, 2), y)
             # update running validation loss
-            server_loss += loss.item()/data.size(0)
-        server_loss = server_loss/len(dataloader)
-        return server_loss
+            avg_loss += loss.item()/x.size(0)
+        avg_loss = avg_loss/len(dataloader)
+        return avg_loss
 
     def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),epochs = 1):
         self.train()
@@ -62,7 +62,6 @@ class StackOverflow_Model(nn.Module):
                 loss.backward()
                 # apply gradients
                 optimizer.step()
-                print({ 'epoch': epoch, 'batch': batch, 'loss': loss.item() })
         return loss.item()
 
 
