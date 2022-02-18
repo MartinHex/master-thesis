@@ -30,7 +30,7 @@ class StackOverflow(FederatedDataLoader):
         root = os.path.join('data')
         data_path = os.path.join(root,'Stackoverflow')
         usr_cmnts_pth = os.path.join(data_path,'userEntries_%i_%i.json'%(n_entries,n_words))
-
+        self.sequence_length=20
         self.number_of_clients = number_of_clients
 
         # Download if not new data
@@ -63,7 +63,7 @@ class StackOverflow(FederatedDataLoader):
         # Preproccess data for the current vocab
         for usr in random_sample:
             for usr_cmnt in usr_cmnts[usr]:
-                usr_cmnt['tokens'] = self.preprocess(usr_cmnt['tokens'],n_words)
+                usr_cmnt['tokens'] = self.preprocess(usr_cmnt['tokens'],min_words=n_words)
 
         # Construct training and test data
         sequences = [[cmnt['tokens'] for cmnt in usr_cmnts[usr]]
@@ -76,13 +76,15 @@ class StackOverflow(FederatedDataLoader):
     def get_training_dataloaders(self, batch_size, shuffle = True):
         dataloaders = []
         for client in self.split_trainset:
-            dataset = WordSequenceDataset(sequences=client,vocab=self.vocab)
+            dataset = WordSequenceDataset(sequences=client,vocab=self.vocab,
+                                            sequence_length=self.sequence_length)
             dataloader = DataLoader(dataset,batch_size = batch_size, shuffle = shuffle)
             dataloaders.append(dataloader)
         return dataloaders
 
     def get_test_dataloader(self, batch_size):
-        dataset = WordSequenceDataset(sequences=self.testset,vocab=self.vocab)
+        dataset = WordSequenceDataset(sequences=self.testset,vocab=self.vocab,
+                                        sequence_length=self.sequence_length)
         return DataLoader(dataset,batch_size = batch_size, shuffle = False)
 
     def get_training_raw_data(self):
@@ -94,17 +96,15 @@ class StackOverflow(FederatedDataLoader):
     def get_vocab(self):
         return self.vocab
 
-    def preprocess(self,sentence,n_words=20):
+    def preprocess(self,sentence,min_words=20):
         for i,w in enumerate(sentence):
             if(w not in self.vocab):
                 sentence[i] = 'OoV'
         res_seq = ['BoS']+sentence+['EoS']
-        remaining_space = n_words-len(res_seq)+1
+        remaining_space = min_words-len(res_seq)+1
         if(remaining_space>0):
             res_seq= ['Pad']*remaining_space+res_seq
-
-        # +1 to get 20 word sentence input and output.
-        return res_seq[:(n_words+1)]
+        return res_seq
 
 
 def downloadStackOverflow(root='./',n_entries=128,n_clients=10000):
@@ -157,18 +157,24 @@ class WordSequenceDataset(Dataset):
     Args:
         data: list of data for the dataset.
     """
-    def __init__(self,sequences,vocab):
-        self.vocab = vocab
+    def __init__(self,sequences,vocab,sequence_length=20):
         self.sequences = sequences
+        self.sequence_length = sequence_length
+        self.vocab = vocab
+        # Set up indexing for dynamically loading different subsets of sentences.
+        samples_per_sentence = [len(s)-sequence_length for s in sequences]
+        self.indexing = [[i,j] for i in range(len(sequences)) for j in range(samples_per_sentence[i])]
 
         self.index_to_word = {index: word for index, word in enumerate(self.vocab)}
         self.word_to_index = {word: index for index, word in enumerate(self.vocab)}
 
     def __len__(self):
-        return len(self.sequences)
+        return len(self.indexing)
 
     def __getitem__(self, index):
-        sequence = [self.word_to_index[w] for w in self.sequences[index]]
+        seq,first_word = self.indexing[index]
+        sequence = self.sequences[seq][first_word:(first_word+self.sequence_length+1)]
+        sequence = [self.word_to_index[w] for w in sequence]
         return (
             tensor(sequence[:-1]),
             tensor(sequence[1:])

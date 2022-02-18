@@ -28,7 +28,8 @@ class StackOverflow_Model(nn.Module):
         embed = self.embedding(x)
         output, state = self.lstm(embed, prev_state)
         logits = self.fc(output)
-        return logits, state
+        p = nn.Softmax(logits).dim
+        return p, state
 
     def init_state(self):
         return (torch.zeros(self.num_layers, self.sequence_length, self.lstm_size),
@@ -46,6 +47,12 @@ class StackOverflow_Model(nn.Module):
             avg_loss += loss.item()/x.size(0)
         avg_loss = avg_loss/len(dataloader)
         return avg_loss
+
+    def predict(x):
+        self.eval() # prep model for evaluation
+        state_h, state_c = self.init_state()
+        y_pred, (state_h, state_c) = self(x, (state_h, state_c))
+        return y_pred[-1]
 
     def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),epochs = 1):
         self.train()
