@@ -1,21 +1,32 @@
-from Servers.FedAvgServer import FedAvgServer
-from Clients.FedAvgClient import FedAvgClient
-from Architectures.MNIST_Architecture import MNIST_Architecture
-from Dataloaders.Mnist import Mnist
+from Models.MNIST_Model import MNIST_Model as Model
+from Dataloaders.Mnist import Mnist as Dataloader
+from Algorithms.FedAvg import FedAvg
+from Models.Callbacks.Callbacks import Callbacks
+import matplotlib.pyplot as plt
 
 number_of_clients = 5
-number_of_rounds = 1
 batch_size = 16
+dataloader = Dataloader(number_of_clients)
+test_data = dataloader.get_test_dataloader(batch_size)
 
-mnist = Mnist(number_of_clients)
-client_dataloaders = mnist.get_training_dataloaders(batch_size)
-clients = [FedAvgClient(MNIST_Architecture(), loader) for loader in client_dataloaders]
-server = FedAvgServer(MNIST_Architecture())
+# Create callback functions that are run at the end of every round
+cbs = Callbacks(test_data)
+callbacks = [
+    cbs.client_loss,
+    cbs.server_loss,
+    cbs.client_accuracy,
+    cbs.server_accuracy,
+]
 
-for round in range(number_of_rounds):
-    for client in clients:
-        loss = client.train()
-        print(loss)
+#Create an instance of FedAvg and train a number of rounds
+alg = FedAvg(dataloader=dataloader, Model=Model, callbacks = callbacks, n_clients=number_of_clients)
+alg.run(2)
 
-    server.aggregate(clients)
-    server.push_weights(clients)
+#Access the callback history and plot the client loss
+for key, values in alg.callback_data[0].items():
+    plt.plot(values, label = key)
+plt.title('Clinet Loss')
+plt.xlabel('Round')
+plt.ylabel('Loss')
+plt.legend()
+plt.show()
