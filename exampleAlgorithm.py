@@ -1,26 +1,32 @@
-from Models.StackOverflow_Model import StackOverflow_Model as Model
-from Dataloaders.StackOverflow import StackOverflow as Dataloader
+from Models.MNIST_Model import MNIST_Model as Model
+from Dataloaders.Mnist import Mnist as Dataloader
 from Algorithms.FedAvg import FedAvg
+from Models.Callbacks.Callbacks import Callbacks
+import matplotlib.pyplot as plt
 
 number_of_clients = 5
 batch_size = 16
-
 dataloader = Dataloader(number_of_clients)
 test_data = dataloader.get_test_dataloader(batch_size)
-def server_loss(self):
-    test_loss = self.server.evaluate(test_data)
-    print("Current Server val loss: {:.5f}".format(test_loss))
 
-def client_loss(self):
-    for i, client in enumerate(self.clients):
-        client_loss = client.evaluate(test_data)
-        print("Client {}: val loss: {:.5f}".format(i, client_loss))
-
+# Create callback functions that are run at the end of every round
+cbs = Callbacks(test_data)
 callbacks = [
-    client_loss,
-    server_loss,
+    cbs.client_loss,
+    cbs.server_loss,
+    cbs.client_accuracy,
+    cbs.server_accuracy,
 ]
 
-alg = FedAvg(dataloader=dataloader, Model=Model, callbacks = callbacks, n_clients=5)
+#Create an instance of FedAvg and train a number of rounds
+alg = FedAvg(dataloader=dataloader, Model=Model, callbacks = callbacks, n_clients=number_of_clients)
+alg.run(2)
 
-alg.run(1)
+#Access the callback history and plot the client loss
+for key, values in alg.callback_data[0].items():
+    plt.plot(values, label = key)
+plt.title('Clinet Loss')
+plt.xlabel('Round')
+plt.ylabel('Loss')
+plt.legend()
+plt.show()
