@@ -69,7 +69,7 @@ class StackOverflow(FederatedDataLoader):
         sequences = [[cmnt['tokens'] for cmnt in usr_cmnts[usr]]
                             for usr in random_sample]
         self.split_trainset = sequences[:number_of_clients]
-        self.testset = [seq for usr_seq in  sequences[(number_of_clients+1):]
+        self.testset = [seq for usr_seq in  sequences[number_of_clients:]
                         for seq in usr_seq]
 
 
