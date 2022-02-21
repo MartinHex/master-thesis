@@ -18,7 +18,7 @@ class StackOverflow(FederatedDataLoader):
     preprocessed data is stored in a data folder.
     This data in json format userComments_{n_entries}_{n_words}.json .
     """
-    def __init__(self, number_of_clients, n_words=20,n_entries=128,seed=0,vocab_size=10000):
+    def __init__(self, number_of_clients, n_words=20,n_entries=128,seed=0,vocab_size=10000,test_size=0.25):
         """Constructor
 
         Args:
@@ -52,7 +52,7 @@ class StackOverflow(FederatedDataLoader):
         self.vocab = set(list(counts_srtd)[-vocab_size:])
 
         # Sample train and testing data
-        random_sample = random.sample(list(usr_cmnts),2*number_of_clients)
+        random_sample = random.sample(list(usr_cmnts),number_of_clients)
 
         # Add placeholder indicies to data.
         self.vocab.add('OoV')
@@ -68,9 +68,12 @@ class StackOverflow(FederatedDataLoader):
         # Construct training and test data
         sequences = [[cmnt['tokens'] for cmnt in usr_cmnts[usr]]
                             for usr in random_sample]
-        self.split_trainset = sequences[:number_of_clients]
-        self.testset = [seq for usr_seq in  sequences[number_of_clients:]
-                        for seq in usr_seq]
+        # Split into 2 different sets
+        test_size = int(n_entries*test_size)
+        self.split_trainset = [seq[test_size:] for seq in sequences ]
+        self.testset = [seq[:test_size] for seq in sequences]
+        # Flatten testset
+        self.testset = [seq for usr_seq in self.testset for seq in usr_seq]
 
 
     def get_training_dataloaders(self, batch_size, shuffle = True):

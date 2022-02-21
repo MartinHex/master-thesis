@@ -24,7 +24,9 @@ class StackOverflow_Model(nn.Module):
         )
         self.fc = nn.Linear(self.lstm_size, n_vocab)
 
-    def forward(self, x, prev_state):
+    def forward(self, x, prev_state=None):
+        if(prev_state==None):
+            prev_state=self.init_state()
         embed = self.embedding(x)
         output, state = self.lstm(embed, prev_state)
         logits = self.fc(output)
@@ -47,12 +49,6 @@ class StackOverflow_Model(nn.Module):
             avg_loss += loss.item()/x.size(0)
         avg_loss = avg_loss/len(dataloader)
         return avg_loss
-
-    def predict(x):
-        self.eval() # prep model for evaluation
-        state_h, state_c = self.init_state()
-        y_pred, (state_h, state_c) = self(x, (state_h, state_c))
-        return y_pred[-1]
 
     def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),epochs = 1):
         self.train()
