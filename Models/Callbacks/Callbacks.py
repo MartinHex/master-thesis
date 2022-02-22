@@ -39,13 +39,8 @@ class Callbacks():
         return client_accuracies
 
 def _accuracy(model, dataloader):
-    correct = 0
-    total_samples = 0
     for data, target in dataloader:
         output = model(data)
-        output_labels = torch.argmax(output[0], axis = 1)
-        for index, value in enumerate(output_labels):
-            total_samples += 1
-            if value == target[index]:
-                correct += 1
-    return correct / total_samples
+        output_labels = torch.argmax(output[0], axis = -1)
+        acc = torch.sum(output_labels == target)/data.size(0)
+    return acc / len(dataloader)
