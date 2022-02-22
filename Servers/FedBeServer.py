@@ -5,9 +5,7 @@ from torch.nn import NLLLoss
 from torchcontrib.optim import SWA
 from torch.optim import SGD
 import random
-import numpy as np
-import warnings
-warnings.filterwarnings("ignore")
+
 
 class FedBeServer(ABCServer):
 
@@ -71,7 +69,7 @@ class FedBeServer(ABCServer):
         if self.verbose: print('FedBe: Evaluating ensambles on local data.')
         loss = NLLLoss(reduction  ='sum')
         self.model.eval()
-        p=np.array([])
+        p=None
         X = []
         for w in S:
             self.model.set_weights(w)
@@ -82,24 +80,25 @@ class FedBeServer(ABCServer):
                 for x,y_p,y_t in zip(x,y_pred,y):
                     nll =loss(y_p,y_t).detach()
                     l = torch.exp(-nll)
-                    res.append(l)
+                    res+=[l]
                     # Add samples to map loss landscape only during first iteration
-                    if(len(X)!=len(p)):
+                    if(p == None):
                         X.append(x)
             res = np.array(res)
-            if(p.size == 0):
-                p = np.zeros(len(res))
-            p+=res
+            if(p == None):
+                p = torch.zeros(len(res))
+            p+=torch.FloatTensor(res)
 
         p = p/len(S)
-        T = [(x_j,p_j) for x_j,p_j in zip(X,p)]
+        Tau = [(x_j,p_j) for x_j,p_j in zip(X,p)]
 
         ############## SWA ############################
         if self.verbose: print('FedBE: Running SWA')
         # Batch data
         random.seed(self.seed)
-        random.shuffle(T)
-        T_batched = [T[i:((i+1)*self.swa_batch_size )] for i in range(len(T)//self.swa_batch_size)]
+        random.shuffle(Tau)
+        Tau_batched = [Tau[i:((i+1)*self.swa_batch_size )]
+                        for i in range(len(Tau)//self.swa_batch_size)]
 
         # initiate and run SWA
         self.model.set_weights(mu_r)
@@ -107,15 +106,18 @@ class FedBeServer(ABCServer):
         base_opt = torch.optim.SGD(self.model.parameters(), lr=self.swa_lr1)
         opt = SWA(base_opt,  swa_freq=self.swa_freq, swa_lr=self.swa_lr2)
         for i in range(self.swa_epochs):
-             for batch in T_batched:
+             for batch in Tau_batched:
                  opt.zero_grad()
                  X_batched = [b[0] for b in batch]
-                 p_batched = torch.tensor([b[1] for b in batch])
+                 p_batched = [b[1] for b in batch]
+                 # To set average loss, we predict to set graph gradients
+                 # Multiply the result by zero and add the average loss to get
+                 # the propper backpropagation.
                  pred = self.model.forward(torch.stack(X_batched))[0]
                  loss=torch.mean(pred)*0-torch.mean(p_batched)
                  loss.backward()
                  opt.step()
-             # if self.verbose: print('FedBE: Epoch %i: loss: %.4f'%(i,-loss.item()))
+             if self.verbose: print('FedBE: Epoch %i: loss: %.4f'%(i,-loss))
 
         if self.verbose: print('FedBE: SWA Destilation done, updating model weights.')
         opt.swap_swa_sgd()
