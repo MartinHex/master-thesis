@@ -17,3 +17,10 @@ To deactivate the environment execute the following.
 ```
 conda deactivate
 ```
+
+To run an example with FedAvg simply execute:
+
+```
+python FedAvgExample.py
+```
+Doing will train a simple network on the MNIST data split into 5 IID clients.

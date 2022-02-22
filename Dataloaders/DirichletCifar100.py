@@ -23,11 +23,6 @@ class DirichletCifar100(FederatedDataLoader):
             download: whether to allow torchvision to download the dataset (default: True)
 
         """
-        self.transform = transforms.Compose(
-            [transforms.ToTensor(),
-             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-            ])
-
         self.map_fine_to_coarse_label = [4,  1, 14,  8,  0,  6,  7,  7, 18,  3,
                                    3, 14,  9, 18,  7, 11,  3,  9,  7, 11,
                                    6, 11,  5, 10,  7,  6, 13, 15,  3, 15,
@@ -66,14 +61,45 @@ class DirichletCifar100(FederatedDataLoader):
         self.alpha = alpha
         self.beta = beta
 
-        self.trainset = torchvision.datasets.CIFAR100(root= './data', train = True, download = download, transform = self.transform)
+        self.trainset = torchvision.datasets.CIFAR100(root= './data', train = True, download = download, transform = transforms.ToTensor())
 
         assert len(self.trainset) % self.number_of_clients == 0, "Number of clients must be evenly devicible with the length of the dataset, length of the dataset is {}".format(len(self.trainset))
 
-        self.testset = [(x, self.map_fine_to_coarse_label[y], y) for x, y in torchvision.datasets.CIFAR100(root = './data', train = False, download = download, transform = self.transform)]
+        self.testset = [(x, self.map_fine_to_coarse_label[y], y) for x, y in torchvision.datasets.CIFAR100(root = './data', train = False, download = download, transform = transforms.ToTensor())]
 
         self.split_trainset = self._create_trainset()
 
+        self._preprocess(self.testset, type = 'test')
+        for client in self.split_trainset:
+            self._preprocess(client)
+
+    def _preprocess(self, data, type = 'train'):
+            total_mean = torch.Tensor([0,0,0])
+            total_mean_squared = torch.Tensor([0,0,0])
+            for index, (image, _, _) in enumerate(data):
+                mean = torch.sum(image, (1,2)).div(32*32)
+                total_mean = total_mean.add(mean)
+                total_mean_squared =  total_mean_squared.add(torch.square(mean))
+            total_mean = total_mean.div(len(data))
+            total_variance = total_mean_squared.div(len(data)).sub(torch.square(total_mean))
+            total_std = torch.sqrt(total_variance)
+
+            if type == 'train':
+                transform = transforms.Compose(
+                    [
+                        transforms.RandomCrop(24), #Size 24 given paper by paper.
+                        transforms.Normalize(total_mean, total_std),
+                    ])
+            elif type == 'test':
+                transform = transforms.Compose(
+                    [
+                        transforms.CenterCrop(24), #Size 24 given paper by paper.
+                        transforms.Normalize(total_mean, total_std),
+                    ])
+
+            for index, (image, c, f) in enumerate(data):
+                data[index] = (transform(image), c, f)
+                
     def get_training_raw_data(self):
         """Get the training data in the same partition as in the dataloaders but in form of lists of Tensors
 
