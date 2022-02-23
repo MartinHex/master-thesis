@@ -28,15 +28,20 @@ class CIFAR_Model(nn.Module):
         server_loss = server_loss/len(dataloader)
         return server_loss
 
-    def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),epochs = 1):
+    def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),
+                    epochs = 1,device=None):
         #def train(num_epochs, model, loader,optimizer,loss_func):
-        self.train()
+        model = self.to(device) if (device!= None) else self
+        model.train()
         for epoch in range(epochs):
             for i, (input_data, labels) in enumerate(dataloader):
+                if(device!= None):
+                    input_data = data.to(device)
+                    labels = target.to(device)
                 # gives batch data, normalize x when iterate train_loader
                 b_x = Variable(input_data)   # batch x
                 b_y = Variable(labels)   # batch y
-                output = self(b_x)[0]
+                output = model(b_x)[0]
                 loss = loss_func(output, b_y)
                 # clear gradients for this training step
                 optimizer.zero_grad()

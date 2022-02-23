@@ -50,13 +50,21 @@ class StackOverflow_Model(nn.Module):
         avg_loss = avg_loss/len(dataloader)
         return avg_loss
 
-    def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),epochs = 1):
-        self.train()
+    def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),
+                    epochs = 1,device=None):
+        model = self.to(device) if (device!= None) else self
+        model.train()
         for epoch in range(epochs):
             state_h, state_c = self.init_state()
+            if(device!= None):
+                state_h = state_h.to(device)
+                state_c = state_c.to(device)
             for batch, (x, y) in enumerate(dataloader):
+                if(device!= None):
+                    x = x.to(device)
+                    y = y.to(device)
                 # gives batch data, normalize x when iterate train_loader
-                y_pred, (state_h, state_c) = self(x, (state_h, state_c))
+                y_pred, (state_h, state_c) = model(x, (state_h, state_c))
                 loss = loss_func(y_pred.transpose(1, 2), y)
                 # Detatch reference for maintaining graph-structure
                 state_h = state_h.detach()

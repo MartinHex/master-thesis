@@ -3,18 +3,20 @@ channels:
 - defaults
 - pytorch
 dependencies:
-  - python
-  - pip
-  - numpy
-  - pandas
-  - jupyter
-  - matplotlib
-  - seaborn
-  - pytorch
-  - torchvision
-  - h5py
+  - python >=3.7,<3.9
+  - pip=20.2.4
+  - numpy=1.19.5
+  - pandas=1.3.1
+  - jupyter=1.0.0
+  - matplotlib=3.4.3
+  - seaborn=0.11.0
+  - pytorch>=1.8.1
+  - h5py=3.1.0
   - pip:
     - tqdm
     - torchcontrib
-    - tensorflow <2.5
+    - tensorflow <=2.5
+    - torch=1.10.2+cu113
+    - torchvision=0.11.3+cu113
+    - torchaudio=0.10.2+cu113
     - tensorflow_federated
