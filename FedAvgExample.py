@@ -12,18 +12,19 @@ test_data = dataloader.get_test_dataloader(batch_size)
 # Create callback functions that are run at the end of every round
 cbs = Callbacks(test_data)
 callbacks = [
-    cbs.client_loss,
-    cbs.server_loss,
-    cbs.client_accuracy,
-    cbs.server_accuracy,
+    ('client_loss', cbs.client_loss),
+    ('server_loss', cbs.server_loss),
+    ('client_accuracy', cbs.client_accuracy),
+    ('server_accuracy', cbs.server_accuracy),
 ]
 
 #Create an instance of FedAvg and train a number of rounds
-alg = FedAvg(dataloader=dataloader, Model=Model, callbacks = callbacks, n_clients=number_of_clients)
+alg = FedAvg(dataloader=dataloader, Model=Model, callbacks = callbacks, n_clients=number_of_clients, save_callbacks = True)
 alg.run(2)
 
 #Access the callback history and plot the client loss
-for key, values in alg.callback_data[0].items():
+client_losses = alg.get_callback_data('client_loss')
+for key, values in client_losses.items():
     plt.plot(values, label = key)
 plt.title('Clinet Loss')
 plt.xlabel('Round')
