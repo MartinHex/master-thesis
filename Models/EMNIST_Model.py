@@ -85,8 +85,8 @@ class EMNIST_Model(nn.Module):
         for epoch in range(epochs):
             for i, (input_data, labels) in enumerate(dataloader):
                 if(device!= None):
-                    input_data = data.to(device)
-                    labels = target.to(device)
+                    input_data = input_data.to(device)
+                    labels = labels.to(device)
                 # gives batch data, normalize x when iterate train_loader
                 b_x = Variable(input_data)   # batch x
                 b_y = Variable(labels)   # batch y
