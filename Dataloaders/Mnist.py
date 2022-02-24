@@ -3,31 +3,50 @@ import torchvision
 import numpy as np
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+from collections import defaultdict
 
 class Mnist(FederatedDataLoader):
     """Federated wrapper class for the Torchvision MNIST dataset
 
-    The class splits the MNIST training data into the desired amount of client with a uniform distribution.
+    The wrapper trim away data the minimum amount of data needed to make the dataset IID w.r.t. labels and such that it can be split into the number of clients specified.
+
+    The class splits the MNIST training data into the desired amount of client with a uniform distribution as default.
+    To split the data in a non-IID fashion tune the alpha parameter to do a LDA with dirichlet parameter alpha.
     """
-    def __init__(self, number_of_clients,  download = True):
+    def __init__(self, number_of_clients,  download = True, alpha = 'inf'):
         """Constructor
 
         Args:
             number_of_clients: how many federated clients to split the data into (int).
             download: whether to allow torchvision to download the dataset (default: True)
+            alpha: dirichlet parameter for LDA, default is 'inf' indicating IID split (int)
 
         """
         self.transform = torchvision.transforms.Compose(
             [torchvision.transforms.ToTensor()
             ])
+        self.alpha = alpha
 
         self.number_of_clients = number_of_clients
 
-        self.trainset = torchvision.datasets.MNIST(root= './data', train = True, download = download, transform = self.transform)
+        trainset = torchvision.datasets.MNIST(root= './data', train = True, download = download, transform = self.transform)
 
-        assert len(self.trainset) % self.number_of_clients == 0, "Number of clients must be evenly devicible with the length of the dataset, length of the dataset is {}".format(len(self.trainset))
+        testset = [(x, y) for x, y in torchvision.datasets.MNIST(root = './data', train = False, download = download, transform = self.transform)]
 
-        self.testset = [(x, y) for x, y in torchvision.datasets.MNIST(root = './data', train = False, download = download, transform = self.transform)]
+        self.mapped_trainset = self._map_set(trainset)
+        for key in self.mapped_trainset:
+            np.random.shuffle(self.mapped_trainset[key])
+
+        self.mapped_testset = self._map_set(testset)
+        for key in self.mapped_testset:
+            np.random.shuffle(self.mapped_testset[key])
+
+        self.train_data_amount = self._normalize_data()
+
+        self.testset = []
+        for key in self.mapped_testset:
+            self.testset.extend(self.mapped_testset[key])
+        np.random.shuffle(self.testset)
 
         self.split_trainset = self._create_trainset()
 
@@ -48,12 +67,58 @@ class Mnist(FederatedDataLoader):
 
     # Split the dataset into clients, if we want to make the dataset non-iid this is where we'd do that.
     def _create_trainset(self):
-        randomized_index = np.random.choice(len(self.trainset), len(self.trainset), replace = False)
         client_list = [[] for i in range(self.number_of_clients)]
-        for i in range(len(self.trainset)):
-            client_index = int( (i * self.number_of_clients) / len(self.trainset))
-            client_list[client_index].append((self.trainset[randomized_index[i]][0], self.trainset[randomized_index[i]][1]))
+        if self.alpha == 'inf':
+            for client in client_list:
+                for label in self.mapped_trainset:
+                    for i in range(self.train_data_amount // (10 * self.number_of_clients)):
+                        tensor = self.mapped_trainset[label].pop()
+                        client.append((tensor, label))
+        else:
+            available_labels = [x for x in range(10)]
+            number_of_samples = self.train_data_amount // self.number_of_clients
+            for client in range(self.number_of_clients):
+                theta = np.random.dirichlet([self.alpha] * len(available_labels))
+                for i in range(number_of_samples):
+                    index = np.nonzero(np.random.multinomial(1, theta, size = 1))[1][0]
+                    label = available_labels[index]
+                    tensor = self.mapped_trainset[label].pop()
+                    client_list[client].append((
+                        tensor,
+                        label,
+                    ))
+                    if (len(self.mapped_trainset[label]) == 0):
+                        available_labels.remove(label)
+                        theta = np.delete(theta, index)
+                        self._renormalize(theta)
         return client_list
+
+    def _map_set(self, data):
+        mapped_set = defaultdict(lambda: [])
+        for (tensor, label) in data:
+            mapped_set[label].append(tensor)
+        return mapped_set
+
+    def _renormalize(self, theta):
+        s = 0
+        for l in theta:
+            s += l
+        map(lambda x: x/s, theta)
+
+    def _normalize_data(self):
+        min_test_frequency = 100000000000
+        for key in self.mapped_testset:
+            if len(self.mapped_testset[key]) < min_test_frequency: min_test_frequency = len(self.mapped_testset[key])
+        for key in self.mapped_testset:
+            self.mapped_testset[key] = self.mapped_testset[key][0:min_test_frequency]
+
+        min_train_frequency = 100000000000
+        for key in self.mapped_trainset:
+            if len(self.mapped_trainset[key]) < min_train_frequency: min_train_frequency = len(self.mapped_trainset[key])
+        train_class_size = ((min_train_frequency // self.number_of_clients) * self.number_of_clients)
+        for key in self.mapped_trainset:
+            self.mapped_testset[key] = self.mapped_testset[key][0:train_class_size]
+        return train_class_size * 10
 
 class ImageDataset(Dataset):
     """Constructor
