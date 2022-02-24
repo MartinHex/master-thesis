@@ -92,7 +92,8 @@ class FedKPServer(ABCServer):
                     self.plot_dist(tmp_idx,axs[i//ncol,i%ncol])
                 output_path = os.path.join(out_fldr,'%i-%i.jpg'%(idx_sum,idx_sum+i))
                 plt.savefig(output_path)
-                plt.cla()
+                plt.clf()
+                plt.close()
                 idx_sum+=n_plots
             idx_sum = max_idx
 
@@ -107,31 +108,6 @@ class FedKPServer(ABCServer):
         z = ker(t)
         ax.plot(t, z, '-')
         ax.fill(t, z, facecolor='blue', alpha=0.5)
-        # ax.plot(x, np.zeros(len(x)), 'k.', markersize=2)
         ax.set_xlim([np.min(t), np.max(t)])
         ax.plot(t_max,ker(t_max),'.',c='red',markersize=10)
         ax.plot([mean_x,mean_x],ax.get_ylim(),'--',c='black')
-
-
-from Dataloaders.Mnist import Mnist
-from Models.MNIST_Model import MNIST_Model
-from Servers.FedKPServer import FedKPServer
-from Clients.FedAvgClient import FedAvgClient as Client
-
-import os
-import matplotlib.pyplot as plt
-
-server = FedKPServer(MNIST_Model())
-
-dataloader = Mnist(5,alpha=0.01)
-clients =[Client(MNIST_Model(),d) for d in dataloader.get_training_dataloaders(16)]
-for client in clients:
-    client.set_weights(w_init)
-for _ in range(epochs):
-    for client in clients:
-        client.train()
-
-server.aggregate(clients)
-server.plot_random_weights((5,5))
-
-server.plot_many_layers('results/tmp',max=100)
