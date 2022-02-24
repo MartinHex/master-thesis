@@ -1,5 +1,5 @@
 from Servers.FedBeServer import FedBeServer
-from Clients.FedAvgClient import FedAvgClient
+from Clients.SGDClient import SGDClient
 from Algorithms.ABCAlgorithm import ABCAlgorithm
 
 class FedBe(ABCAlgorithm):
