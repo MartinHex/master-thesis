@@ -45,7 +45,7 @@ class Mnist(FederatedDataLoader):
 
         self.testset = []
         for key in self.mapped_testset:
-            self.testset.extend(self.mapped_testset[key])
+            self.testset.extend([(t,key) for t in self.mapped_testset[key]])
         np.random.shuffle(self.testset)
 
         self.split_trainset = self._create_trainset()
