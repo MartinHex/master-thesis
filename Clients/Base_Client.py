@@ -4,8 +4,8 @@ class Base_Client(ABC):
     def __init__(self, model):
         self.model = model
 
-    def train(self,device=None):
-        self.model.train_model(self.dataloader,self.optimizer,epochs = 1,device=device)
+    def train(self, epochs = 1, device=None):
+        self.model.train_model(self.dataloader,self.optimizer,epochs = epochs,device=device)
 
     def get_weights(self):
         return self.model.get_weights()

@@ -17,14 +17,14 @@ class ABCAlgorithm(ABC):
             self.callback_data[name] = defaultdict(lambda: [])
         self.callback_data['timestamps'] = []
 
-    def run(self,iterations):
+    def run(self,iterations, epochs = 1):
         self.start_time = datetime.now()
         self.server.push_weights(self.clients)
         for round in range(iterations):
             print('---------------- Round {} ----------------'.format(round + 1))
             self.callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
             for client in self.clients:
-                loss = client.train()
+                loss = client.train(epochs = epochs)
             self.server.aggregate(self.clients)
             self._run_callbacks() if (self.callbacks != None) else None
             self.server.push_weights(self.clients)
