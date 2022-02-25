@@ -1,12 +1,33 @@
 import torch
 from sklearn.metrics import f1_score, recall_score, precision_score
 from collections import defaultdict
+from scipy.stats import kurtosis, skew
 import numpy as np
 
 class Callbacks():
     def __init__(self, dataloader, verbose = True):
         self.dataloader = dataloader
         self.verbose = verbose
+
+    def skew(self,algorithm):
+        client_weights = [cl.get_weights() for cl in algorithm.clients]
+        skews = torch.tensor(())
+        for key in client_weights[0]:
+            client_tensors = [state[key] for state in client_weights]
+            stacked_weights = torch.stack(client_tensors, dim=0)
+            indices = torch.arange(stacked_weights.shape[0])
+            skews = torch.cat((skews, torch.flatten(torch.tensor(skew(torch.index_select(stacked_weights, 0, indices), axis = 0)))))
+        return {'skew': [skew.item() for skew in skews]}
+
+    def kurtosis(self,algorithm):
+        client_weights = [cl.get_weights() for cl in algorithm.clients]
+        kurtosises = torch.tensor(())
+        for key in client_weights[0]:
+            client_tensors = [state[key] for state in client_weights]
+            stacked_weights = torch.stack(client_tensors, dim=0)
+            indices = torch.arange(stacked_weights.shape[0])
+            kurtosises = torch.cat((kurtosises, torch.flatten(torch.tensor(kurtosis(torch.index_select(stacked_weights, 0, indices), axis = 1)))))
+        return {'kurtosis': [kurtosis.item() for kurtosis in kurtosises]}
 
     def server_loss(self, algorithm):
         test_loss = algorithm.server.evaluate(self.dataloader)
