@@ -18,17 +18,26 @@ class MNIST_Model(nn.Module):
         # fully connected layer, output 10 classes
         self.out = nn.Linear(10 * 6 * 6, 10)
 
-
     def forward(self, x):
         x = self.conv1(x)
         x = x.view(x.size(0), -1)
         output = self.out(x)
         return output, x    # return x for visualization
 
-    def evaluate(self,dataloader,loss_func):
+    def predict(self, input, device = None):
+        self.eval()
+        if (device!= None): self.to(device)
+        if (device != None): input = input.to(device)
+        return self(input)
+
+    def evaluate(self,dataloader,loss_func, device = None):
         self.eval() # prep model for evaluation
         server_loss = 0
+        if (device!= None): self.to(device)
         for data, target in dataloader:
+            if(device!= None):
+                data = data.to(device)
+                target = target.to(device)
             # forward pass: compute predicted outputs by passing inputs to the model
             output = self(data)
             # calculate the loss
@@ -40,8 +49,8 @@ class MNIST_Model(nn.Module):
 
     def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),
                     epochs = 1,device=None):
-        model = self.to(device) if (device!= None) else self
-        model.train()
+        if (device!= None): self.to(device)
+        self.train()
         for epoch in range(epochs):
             for i, (input_data, labels) in enumerate(dataloader):
                 if(device!= None):
@@ -50,7 +59,7 @@ class MNIST_Model(nn.Module):
                 # gives batch data, normalize x when iterate train_loader
                 b_x = Variable(input_data)   # batch x
                 b_y = Variable(labels)   # batch y
-                output = model(b_x)[0]
+                output = self(b_x)[0]
                 loss = loss_func(output, b_y)
                 # clear gradients for this training step
                 optimizer.zero_grad()

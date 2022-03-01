@@ -33,15 +33,32 @@ class StackOverflow_Model(nn.Module):
         p = nn.Softmax(logits).dim
         return p, state
 
+    def predict(self, input, device = None):
+        self.eval()
+        state_h, state_c = self.init_state()
+        if (device!= None):
+            self.to(device)
+            state_h = state_h.to(device)
+            state_c = state_c.to(device)
+            input = input.to(device)
+        return self(input, (state_h, state_c))
+
     def init_state(self):
         return (torch.zeros(self.num_layers, self.sequence_length, self.lstm_size),
                 torch.zeros(self.num_layers, self.sequence_length, self.lstm_size))
 
-    def evaluate(self,dataloader,loss_func=nn.CrossEntropyLoss()):
+    def evaluate(self,dataloader,loss_func=nn.CrossEntropyLoss(), device = None):
         self.eval() # prep model for evaluation
         avg_loss = 0
         state_h, state_c = self.init_state()
+        if (device!= None):
+            self.to(device)
+            state_h = state_h.to(device)
+            state_c = state_c.to(device)
         for x,y in dataloader:
+            if(device!= None):
+                x = x.to(device)
+                y = y.to(device)
             # forward pass: compute predicted outputs by passing inputs to the model
             y_pred, (state_h, state_c) = self(x, (state_h, state_c))
             loss = loss_func(y_pred.transpose(1, 2), y)
@@ -52,8 +69,8 @@ class StackOverflow_Model(nn.Module):
 
     def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),
                     epochs = 1,device=None):
-        model = self.to(device) if (device!= None) else self
-        model.train()
+        if (device!= None): self.to(device)
+        self.train()
         for epoch in range(epochs):
             state_h, state_c = self.init_state()
             if(device!= None):
@@ -64,7 +81,7 @@ class StackOverflow_Model(nn.Module):
                     x = x.to(device)
                     y = y.to(device)
                 # gives batch data, normalize x when iterate train_loader
-                y_pred, (state_h, state_c) = model(x, (state_h, state_c))
+                y_pred, (state_h, state_c) = self(x, (state_h, state_c))
                 loss = loss_func(y_pred.transpose(1, 2), y)
                 # Detatch reference for maintaining graph-structure
                 state_h = state_h.detach()
