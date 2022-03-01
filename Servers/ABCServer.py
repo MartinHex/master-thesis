@@ -20,5 +20,5 @@ class ABCServer(ABC):
         for client in clients:
             client.set_weights(self.model.get_weights())
 
-    def evaluate(self, dataloader, loss_func=nn.CrossEntropyLoss()):
-        return self.model.evaluate(dataloader, loss_func)
+    def evaluate(self, dataloader, loss_func=nn.CrossEntropyLoss(), device = None):
+        return self.model.evaluate(dataloader, loss_func, device = device)

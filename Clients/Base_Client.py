@@ -13,5 +13,8 @@ class Base_Client(ABC):
     def set_weights(self, model_state):
         self.model.set_weights(model_state)
 
-    def evaluate(self, dataloader, loss_func = nn.CrossEntropyLoss()):
-        return self.model.evaluate(dataloader, loss_func)
+    def evaluate(self, dataloader, loss_func = nn.CrossEntropyLoss(), device = None):
+        return self.model.evaluate(dataloader, loss_func, device = device)
+
+    def predict(self, dataloader, device = None):
+        return self.model.predict(dataloader, device = device)
