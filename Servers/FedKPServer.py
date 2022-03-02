@@ -56,7 +56,7 @@ class FedKPServer(ABCServer):
         return self._array_to_model_weight(w)
 
     def _model_weight_to_array(self,w):
-        return torch.cat([w[k].flatten() for k in w]).detach().numpy()
+        return torch.cat([w[k].flatten() for k in w]).cpu().detach().numpy()
 
     def _array_to_model_weight(self,a):
         a_tens = torch.Tensor(a)
