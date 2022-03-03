@@ -1,8 +1,8 @@
-from Servers.ABCServer import ABCServer
+from Servers.ProbabilisticServer import ProbabilisticServer
 import torch
 from torch.distributions import Normal
 
-class FedAgServer(ABCServer):
+class FedAgServer(ProbabilisticServer):
 
     def __init__(self,model):
         super().__init__(model)
@@ -36,3 +36,9 @@ class FedAgServer(ABCServer):
         w_r = torch.split(mu_n,self.tens_lengths)
         w_r = {k:torch.reshape(w_r[i],self.model_shapes[i]) for i,k in enumerate(w)}
         self.set_weights(w_r)
+
+    def sample_model(self):
+        w_r = self.distribution.sample()
+        w_r = torch.split(mu_n,self.tens_lengths)
+        w_r = {k:torch.reshape(w_r[i],self.model_shapes[i]) for i,k in enumerate(w)}
+        return w_r

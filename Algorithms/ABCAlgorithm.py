@@ -3,6 +3,7 @@ from collections import defaultdict
 import json
 import os
 from datetime import datetime
+from Servers.ProbabilisticServer import ProbabilisticServer
 
 class ABCAlgorithm(ABC):
 
@@ -17,7 +18,9 @@ class ABCAlgorithm(ABC):
             self.callback_data[name] = defaultdict(lambda: [])
         self.callback_data['timestamps'] = []
 
-    def run(self,iterations, epochs = 1, device = None):
+    def run(self,iterations, epochs = 1, device = None,option = 'mle'):
+        if(option not in ['mle','single_sample','multi_sample']):
+            raise Exception("""Incorrect option provided must be either 'mle', 'single_sample' or 'multi_sample'""")
         self.start_time = datetime.now()
         self.server.push_weights(self.clients)
         for round in range(iterations):
@@ -27,7 +30,14 @@ class ABCAlgorithm(ABC):
                 loss = client.train(epochs = epochs, device = device)
             self.server.aggregate(self.clients)
             self._run_callbacks() if (self.callbacks != None) else None
-            self.server.push_weights(self.clients)
+            if option == 'mle' or not isinstance(self.server,ProbabilisticServer):
+                self.server.push_weights(self.clients)
+            elif option =='single_sample':
+                self.server.set_weights(elf.server.sample_model())
+                self.server.push_weights(self.clients)
+            elif option =='multi_sample':
+                for client in self.clients:
+                    client.set_weights(self.server.sample_model())
 
         if self.save_callbacks: self._save_callbacks()
         return None

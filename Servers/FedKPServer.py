@@ -1,4 +1,4 @@
-from Servers.ABCServer import ABCServer
+from Servers.ProbabilisticServer import ProbabilisticServer
 import torch
 from torch.distributions import Normal
 from scipy.stats import gaussian_kde
@@ -8,7 +8,7 @@ import os
 import matplotlib.pyplot as plt
 
 
-class FedKPServer(ABCServer):
+class FedKPServer(ProbabilisticServer):
     def __init__(self,model):
         super().__init__(model)
         w = model.get_weights()
@@ -23,7 +23,7 @@ class FedKPServer(ABCServer):
         self.kernals = [gaussian_kde([0,1],bw_method='silverman') for i in range(self.model_size)]
         self.stats = [[-1,1,0,1] for i in range(self.model_size)]
 
-    def aggregate(self, clients,cov_adj=True):
+    def aggregate(self, clients,cov_adj=False,select_MLE=False):
         # List and translate data into numpy matrix
         client_weights = np.array([self._model_weight_to_array(c.get_weights())
                                     for c in clients],dtype='float64')
@@ -42,7 +42,11 @@ class FedKPServer(ABCServer):
 
         if(cov_adj):
             self.MLE_weight = np.matmul(sig,self.MLE_weight.T)
-        res_model = self._array_to_model_weight(self.MLE_weight)
+
+        if(select_MLE):
+            res_model = self._array_to_model_weight(self.MLE_weight)
+        else:
+            res_model = self.sample_model()
         self.model.set_weights(res_model)
 
     def _kernelEsstimator(self,x):

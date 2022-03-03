@@ -1,4 +1,4 @@
-from Servers.ABCServer import ABCServer
+from Servers.ProbabilisticServer import ProbabilisticServer
 import torch
 from torch.distributions import Normal
 from scipy.stats import gaussian_kde
@@ -7,7 +7,7 @@ from scipy.optimize import minimize
 import os
 import matplotlib.pyplot as plt
 
-class FedKPServer(ABCServer):
+class FedKPServer(ProbabilisticServer):
     def __init__(self,model,shrinkage=1):
         super().__init__(model)
         w = model.get_weights()
