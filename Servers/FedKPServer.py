@@ -23,18 +23,25 @@ class FedKPServer(ABCServer):
         self.kernals = [gaussian_kde([0,1],bw_method='silverman') for i in range(self.model_size)]
         self.stats = [[-1,1,0,1] for i in range(self.model_size)]
 
-    def aggregate(self, clients):
+    def aggregate(self, clients,cov_adj=True):
         # List and translate data into numpy matrix
-        client_weights = [c.get_weights() for c in clients]
         client_weights = np.array([self._model_weight_to_array(c.get_weights())
-                                    for c in clients])
+                                    for c in clients],dtype='float64')
 
+        if(cov_adj):
+            sig = np.cov(client_weights.T)
+            # Stabalize esstimate
+            sig = sig+0.001*np.eye(sig.shape[0])
+            sig_inv = np.linalg.inv(sig)
+            client_weights = np.matmul(sig_inv,client_weights.T).T
         # Kernel Esstimation
         for i in range(self.model_size):
             x = client_weights[:,i]
             self.stats[i] = [np.min(x),np.max(x),np.mean(x),np.std(x)]
             self.kernals[i],self.MLE_weight[i] = self._kernelEsstimator(x)
 
+        if(cov_adj):
+            self.MLE_weight = np.matmul(sig,self.MLE_weight.T)
         res_model = self._array_to_model_weight(self.MLE_weight)
         self.model.set_weights(res_model)
 
@@ -66,8 +73,10 @@ class FedKPServer(ABCServer):
         return model_w
 
 
-    def plot_random_weights(self,shape):
+    def plot_random_weights(self,shape,seed=None):
         nrow,ncol = shape
+        if(seed!=None):
+            np.random.seed(seed)
         integers = np.random.randint(self.model_size,size=nrow*ncol)
         fig, axs = plt.subplots(nrows=nrow,ncols=ncol,figsize=(ncol*3.2,nrow*3.2))
         for i,idx in enumerate(integers):
