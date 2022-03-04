@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 class FedBe(ABCAlgorithm):
     def __init__(self,dataloader,Model,callbacks=[], save_callbacks = False,p_validation=0.1,batch_size=16):
-        super().__init__(dataloader,Model, callbacks, save_callbacks)
+        super().__init__(callbacks, save_callbacks)
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
         loc_data = dataloader.get_test_dataloader(batch_size)
         # Set up local dataloader

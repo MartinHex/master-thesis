@@ -21,7 +21,7 @@ callbacks = [
 ]
 
 #Create an instance of FedAvg and train a number of rounds
-alg = FedAvg(dataloader=dataloader, Model=Model, callbacks = callbacks, n_clients=number_of_clients, save_callbacks = True)
+alg = FedAvg(dataloader=dataloader, Model=Model, callbacks = callbacks, batch_size=16 save_callbacks = True)
 alg.run(2, device = device)
 
 #Access the callback history and plot the client loss

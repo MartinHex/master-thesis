@@ -7,9 +7,7 @@ from Servers.ProbabilisticServer import ProbabilisticServer
 
 class ABCAlgorithm(ABC):
 
-    def __init__(self, dataloader, Model, callbacks, save_callbacks):
-        self.dataloader=dataloader
-        self.Model = Model
+    def __init__(self, callbacks, save_callbacks):
         self.callbacks = callbacks
         self.save_callbacks = save_callbacks
         self.callback_data = dict()
