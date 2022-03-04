@@ -1,6 +1,6 @@
 #Import models
-from Models.StackOverflow_Model import StackOverflow_Model as Model
-from Dataloaders.StackOverflow import StackOverflow as Dataloader
+from Models.MNIST_Model_lite import MNIST_Model as Model
+from Dataloaders.Mnist import Mnist as Dataloader
 # Import Algorithms
 from Algorithms.FedAvg import FedAvg
 from Algorithms.FedBe import FedBe
@@ -32,12 +32,12 @@ callbacks = [
 ]
 
 # Set parameters to replicate paper results
-fedpa_clients = [FedPaClient( Model(), dl, learning_rate = 0.1, burn_in =  800,
-                                K = 5, shrinkage = 0.01, mcmc_samples = 700)
-                                for dl in dataloader.get_training_dataloaders()]
+fedpa_clients = [FedPaClient( Model(), dl, learning_rate = 0.01, burn_in =  100,
+                                K = 5, shrinkage = 0.1, mcmc_samples = 100)
+                                for dl in dataloader.get_training_dataloaders(16)]
 fedpa_server = FedAvgServer(Model())
 
-fedpa = Algorithm(server,fedpa_clients)
+fedpa = Algorithm(fedpa_server,fedpa_clients)
 
 FedBe(dataloader=dataloader, Model=Model, callbacks = callbacks, save_callbacks = True)
 # Initiate algorithms with same parameters as in papers.
@@ -48,6 +48,6 @@ alghs = [FedAg(dataloader=dataloader, Model=Model, callbacks = callbacks, save_c
 ]
 
 alghs[0].server.push_weights([alg.server for alg in alghs[1:]])
-iterations = 30
+iterations = 1
 for alg in alghs:
-    alg.run(30)
+    alg.run(iterations)

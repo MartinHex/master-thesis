@@ -5,10 +5,10 @@ from collections import defaultdict
 
 class FedPaClient(Base_Client):
     def __init__(self, model, dataloader, learning_rate = 0.01, burn_in =  0,
-                K = 1, shrinkage = 1, mcmc_samples = 1,,momentum=0,decay=0,dampening=0):
+                K = 1, shrinkage = 1, mcmc_samples = 1,momentum=0,decay=0,dampening=0):
         super(FedPaClient, self).__init__(model)
         self.optimizer = optim.SGD(self.model.parameters(), lr = learning_rate,
-                                momentum=momentum,decay=decay,dampening=dampening)
+                                momentum=momentum,weight_decay=decay,dampening=dampening)
         self.dataloader = dataloader
         self.burn_in = burn_in
         self.K = K
@@ -16,7 +16,7 @@ class FedPaClient(Base_Client):
         self.beta = shrinkage
         self.shrinkage = shrinkage
 
-    def train(self):
+    def train(self,epochs=1):
         initial_weights = self.model.get_weights()
         # Burn in phase
         self.model.train_model(self.dataloader,self.optimizer,epochs = self.burn_in) if self.burn_in > 0 else None

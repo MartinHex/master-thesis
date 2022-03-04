@@ -4,11 +4,16 @@ import json
 import os
 from datetime import datetime
 from Servers.ProbabilisticServer import ProbabilisticServer
+from random import sample
 
-class ABCAlgorithm(ABC):
-
-    def __init__(self, callbacks, save_callbacks):
-        self.callbacks = callbacks
+class Algorithm():
+    def __init__(self,server,clients, callbacks=None, save_callbacks=False,clients_per_round=None):
+        self.callbacks = callbacks if callbacks!=None else []
+        self.clients = clients
+        self.clients_per_round = len(clients) if clients_per_round==None else clients_per_round
+        if( len(clients)<self.clients_per_round):
+            raise Exception('More clients per round than clients provided.')
+        self.server = server
         self.save_callbacks = save_callbacks
         self.callback_data = dict()
         for name, callback in self.callbacks:
@@ -23,10 +28,11 @@ class ABCAlgorithm(ABC):
         for round in range(iterations):
             print('---------------- Round {} ----------------'.format(round + 1))
             self.callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
-            for client in self.clients:
+            client_sample = self.sample_clients()
+            for client in client_sample:
                 loss = client.train(epochs = epochs, device = device)
-            self.server.aggregate(self.clients)
-            self._run_callbacks() if (self.callbacks != None) else None
+            self.server.aggregate(client_sample)
+            if (self.callbacks != None): self._run_callbacks()
             if option == 'mle' or not isinstance(self.server,ProbabilisticServer):
                 self.server.push_weights(self.clients)
             elif option =='single_sample':
@@ -56,3 +62,9 @@ class ABCAlgorithm(ABC):
         if not os.path.exists(log_dir): os.mkdir(log_dir)
         with open(file_path, "w") as outfile:
             json.dump(self.callback_data, outfile)
+
+    def sample_clients(self):
+        if self.clients_per_round!=len(self.clients):
+            return sample(self.clients,self.clients_per_round)
+        else:
+            return self.clients

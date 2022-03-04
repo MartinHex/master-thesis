@@ -7,7 +7,7 @@ from Algorithms.FedBe import FedBe
 from Algorithms.FedPa import FedPa
 from Algorithms.FedKp import FedKp
 from Algorithms.FedAg import FedAg
-from Algorithms.CustomAlgorithm import CustomAlgorithm
+from Algorithms.Algorithm import Algorithm
 # Import servers and clients for CustomAlgorithms
 from Clients.FedPaClient import FedPaClient
 from Servers.FedAvgServer import FedAvgServer
@@ -16,6 +16,7 @@ from Servers.FedBeServer import FedBeServer
 # Additional imports
 from Models.Callbacks.Callbacks import Callbacks
 import matplotlib.pyplot as plt
+import torch
 
 
 number_of_clients = 5
@@ -41,7 +42,7 @@ fedpa_clients = [FedPaClient( Model(), dl, learning_rate = 0.01, burn_in =  400,
                                 K = 10, shrinkage = 0.01, mcmc_samples = 1100)
                                 for dl in dataloader.get_training_dataloaders()]
 fedpa_server = FedAvgServer(Model())
-fedpa = CustomAlgorithm(fedpa_server,fedpa_clients)
+fedpa = Algorithm(fedpa_server,fedpa_clients)
 
 # FedBe uses cifar100 as default arguments.
 

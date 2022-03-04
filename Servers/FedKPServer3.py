@@ -3,7 +3,7 @@ import torch
 from scipy.stats import gaussian_kde
 import matplotlib.pyplot as plt
 import random
-import warning
+import warnings
 
 class FedKPServer(ProbabilisticServer):
     def __init__(self,model,shrinkage=1,store_distributions = True):
@@ -50,7 +50,7 @@ class FedKPServer(ProbabilisticServer):
 
     def sample_model(self):
         if(self.store_distributions):
-        w = [ker.resample(1)[0][0] if ker!= None else self.MLE_weight[i] for i,ker in enumerate(self.kernals)]
+            w = [ker.resample(1)[0][0] if ker!= None else self.MLE_weight[i] for i,ker in enumerate(self.kernals)]
             return self._array_to_model_weight(w)
         else:
             print('Model does not have any distributions, change this by setting store_distributions=True')

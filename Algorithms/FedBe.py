@@ -1,11 +1,10 @@
 from Servers.FedBeServer import FedBeServer
 from Clients.SGDClient import SGDClient
-from Algorithms.ABCAlgorithm import ABCAlgorithm
+from Algorithms.Algorithm import Algorithm
 from torch.utils.data import DataLoader
 
-class FedBe(ABCAlgorithm):
-    def __init__(self,dataloader,Model,callbacks=[], save_callbacks = False,p_validation=0.1,batch_size=16):
-        super().__init__(callbacks, save_callbacks)
+class FedBe(Algorithm):
+    def __init__(self,dataloader,Model,callbacks=[], save_callbacks = False,p_validation=0.1,batch_size=16,clients_per_round=None):
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
         loc_data = dataloader.get_test_dataloader(batch_size)
         # Set up local dataloader
@@ -21,5 +20,6 @@ class FedBe(ABCAlgorithm):
                     adj_dataloader.append((x,y))
             client_dataloaders_adj.append(adj_dataloader)
         # loc_data = DataLoader(loc)
-        self.clients = [SGDClient(Model(), dl) for dl in client_dataloaders]
-        self.server = FedBeServer(Model(),loc_data)
+        clients = [SGDClient(Model(), dl) for dl in client_dataloaders]
+        server = FedBeServer(Model(),loc_data)
+        super().__init__(server,clients, callbacks, save_callbacks,clients_per_round=clients_per_round)
