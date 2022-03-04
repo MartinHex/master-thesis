@@ -58,7 +58,7 @@ class FedKPServer(ProbabilisticServer):
         return ker,t_max
 
     def sample_model(self):
-        w = [ker.resample(1)[0][0] for ker in self.likelihood]
+        w = [ker.resample(1)[0][0] if ker!= None else self.MLE_weight[i] for i,ker in enumerate(self.kernals)]
         return self._array_to_model_weight(w)
 
     def _model_weight_to_array(self,w):
