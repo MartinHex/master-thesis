@@ -1,6 +1,6 @@
 #Import models
-from Models.CIFAR_Model import CIFAR_Model as Model
-from Dataloaders.DirichletCifar100 import DirichletCifar100 as Dataloader
+from Models.EMNIST_Model import EMNIST_Model as Model
+from Dataloaders.Emnist62 import EMNIST as Dataloader
 # Import Algorithms
 from Algorithms.FedAvg import FedAvg
 from Algorithms.FedBe import FedBe
@@ -11,8 +11,6 @@ from Algorithms.CustomAlgorithm import CustomAlgorithm
 # Import servers and clients for CustomAlgorithms
 from Clients.FedPaClient import FedPaClient
 from Servers.FedAvgServer import FedAvgServer
-from Clients.SGDClient import SGDClient
-from Servers.FedBeServer import FedBeServer
 # Additional imports
 from Models.Callbacks.Callbacks import Callbacks
 import matplotlib.pyplot as plt
@@ -20,9 +18,7 @@ import matplotlib.pyplot as plt
 
 number_of_clients = 5
 batch_size = 16
-alpha = input("alpha=")
-beta = input("beta=")
-dataloader = Dataloader(number_of_clients,alpha=alpha,beta=beta)
+dataloader = Dataloader(number_of_clients)
 test_data = dataloader.get_test_dataloader(batch_size)
 device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
 
@@ -36,14 +32,12 @@ callbacks = [
 ]
 
 # Set parameters to replicate paper results
-# FedPA
-fedpa_clients = [FedPaClient( Model(), dl, learning_rate = 0.01, burn_in =  400,
-                                K = 10, shrinkage = 0.01, mcmc_samples = 1100)
+fedpa_clients = [FedPaClient( Model(), dl, learning_rate = 0.01, burn_in =  100,
+                                K = 5, shrinkage = 0.1, mcmc_samples = 100)
                                 for dl in dataloader.get_training_dataloaders()]
-fedpa_server = FedAvgServer(Model())
-fedpa = CustomAlgorithm(fedpa_server,fedpa_clients)
+fedpa_clients = FedAvgServer(Model())
 
-# FedBe uses cifar100 as default arguments.
+fedpa = CustomAlgorithm(server,fedpa_clients)
 
 FedBe(dataloader=dataloader, Model=Model, callbacks = callbacks, save_callbacks = True)
 # Initiate algorithms with same parameters as in papers.
