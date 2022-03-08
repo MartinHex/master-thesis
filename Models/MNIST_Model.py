@@ -43,8 +43,6 @@ class MNIST_Model(nn.Module):
             torch.cuda.empty_cache()
         return output
 
-
-
     def evaluate(self,dataloader,loss_func, device = None,take_mean=True):
         self.eval() # prep model for evaluation
         loss_per_batch = []
