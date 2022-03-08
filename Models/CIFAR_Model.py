@@ -1,6 +1,7 @@
 from torch import nn
 from torch.autograd import Variable
 from torchvision.models import resnet
+import torch
 import copy
 
 class CIFAR_Model(nn.Module):
@@ -19,7 +20,7 @@ class CIFAR_Model(nn.Module):
         self.eval()
         if (device!= None): self.to(device)
         if (device != None): input = input.to(device)
-        self(input)
+        output = self(input)
         if (device!= None):
             self.to('cpu')
             torch.cuda.empty_cache()
@@ -43,7 +44,7 @@ class CIFAR_Model(nn.Module):
             self.to('cpu')
             torch.cuda.empty_cache()
         if(take_mean):
-            return torch.mean(loss_per_batch)
+            return sum(loss_per_batch)/len(loss_per_batch)
         else:
             return loss_per_batch
 

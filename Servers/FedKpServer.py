@@ -3,9 +3,10 @@ import torch
 from scipy.stats import gaussian_kde
 import matplotlib.pyplot as plt
 import random
+from tqdm import tqdm
 import warnings
 
-class FedKPServer(ProbabilisticServer):
+class FedKpServer(ProbabilisticServer):
     def __init__(self,model,shrinkage=1,store_distributions = False):
         super().__init__(model)
         w = model.get_weights()
@@ -31,7 +32,7 @@ class FedKPServer(ProbabilisticServer):
         # List and translate data into numpy matrix
         client_weights = [c.get_weights() for c in clients]
         client_weights = torch.stack([self._model_weight_to_array(c.get_weights())for c in clients])
-
+        print('Aggregating Models.')
         if(cov_adj):
             client_weights = self._cov_adj_client_weights(client_weights,device=device)
             client_weights = torch.stack(client_weights)
@@ -122,7 +123,7 @@ class FedKPServer(ProbabilisticServer):
     def _cov_adj_client_weights(self, client_weights,device=None):
         mean_w = torch.mean(client_weights,0)
         res_w = [mean_w.detach() for i in range(len(client_weights))]
-        for i,w_0 in enumerate(client_weights):
+        for i,w_0 in enumerate(tqdm(client_weights)):
             w = [cw for j,cw in enumerate(client_weights) if j!=i]
             cov_adj_w = self._cov_adj_weight(w,w_0,device=device)
             res_w[i] = res_w[i].add(cov_adj_w)
@@ -130,19 +131,19 @@ class FedKPServer(ProbabilisticServer):
 
     def _cov_adj_weight(self, w,w_0,device=None):
         device = device if device !=None else 'cpu'
-        w_0.to(device)
-        current_delta = w_0.sub(w[0]).to(device)
-        current_average = w[0].to(device)
-        u_t = w[1].sub(current_average)
+        w_0 = w_0.to(device)
+        current_delta = w_0.sub(w_0).to(device)
+        current_average = w[1].sub(w[0]).div(2).to(device)
+        u_t = w[1].sub(w[0]).to(device)
         v = [u_t]
         gamma_factors = []
         sum = torch.zeros(self.model_size).to(device)
         # Produce the desired gradient online and at any-time as described in appendix C by Al-Shedivat et al.
         # (https://arxiv.org/pdf/2010.05273.pdf)
         for i in range(2,len(w)):
-            w[i].to(device)
-            u_t = w[i].sub(current_average)
-            t=i+1
+            w_i = w[i].to(device)
+            u_t = w_i.sub(current_average)
+            t=i
             # Add to sum
             gamma_k = (self.beta * i) / (i + 1)
             nominator = gamma_k
@@ -157,7 +158,7 @@ class FedKPServer(ProbabilisticServer):
             v_t = u_t.sub(sum)
             v.append(v_t)
             # Calculate adjusted delta
-            current_average = w[i].add(current_average,alpha=i).div(i + 1)
+            current_average = w_i.add(current_average,alpha=i).div(i + 1)
             gamma_t = (self.beta * (t - 1)) / t
             nominator = gamma_t * (t * u_t.matmul(current_delta) -u_t.matmul(v_t))
             denominator = 1 + gamma_t * v_t.matmul(u_t)

@@ -3,7 +3,7 @@ import torch
 
 class FedAvgServer(ABCServer):
 
-    def aggregate(self, clients):
+    def aggregate(self, clients, device = None):
         n_clients = len(clients)
         server_weights = self.get_weights()
         client_weights = [cl.get_weights() for cl in clients]

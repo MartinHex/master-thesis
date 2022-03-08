@@ -1,5 +1,6 @@
 from torch import nn
 from torch.autograd import Variable
+import torch
 import copy
 
 class EMNIST_Model(nn.Module):
@@ -59,7 +60,7 @@ class EMNIST_Model(nn.Module):
         if (device!= None):
             self.to('cpu')
             torch.cuda.empty_cache()
-        return self(input)
+        return output
 
     def evaluate(self,dataloader,loss_func, device = None,take_mean=True):
         """Evaluates the model on a given loss function.
@@ -85,7 +86,7 @@ class EMNIST_Model(nn.Module):
             self.to('cpu')
             torch.cuda.empty_cache()
         if(take_mean):
-            return torch.mean(loss_per_batch)
+            return sum(loss_per_batch)/len(loss_per_batch)
         else:
             return loss_per_batch
 

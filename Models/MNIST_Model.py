@@ -1,5 +1,6 @@
 from torch import nn
 from torch.autograd import Variable
+import torch
 import copy
 
 class MNIST_Model(nn.Module):
@@ -60,8 +61,10 @@ class MNIST_Model(nn.Module):
         if (device!= None):
             self.to('cpu')
             torch.cuda.empty_cache()
-        server_loss = server_loss/len(dataloader)
-        return server_loss
+        if(take_mean):
+            return sum(loss_per_batch)/len(loss_per_batch)
+        else:
+            return loss_per_batch
 
     def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),
                     epochs = 1,device=None, generator = False):
