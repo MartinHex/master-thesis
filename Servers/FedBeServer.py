@@ -15,7 +15,7 @@ class FedBeServer(ABCServer):
         w = model.get_weights()
         self.loc_data = loc_data
         # Set initial distributions
-        w_flat = torch.cat([w[k].cpu().flatten() for k in w])
+        w_flat = torch.cat([w[k].flatten() for k in w])
         self.distribution = Normal(w_flat,torch.ones(len(w_flat)))
         # Set tensorlengths for future reconstruction of flattening.
         self.tens_lengths = [len(w[k].flatten()) for k in w]
@@ -41,7 +41,7 @@ class FedBeServer(ABCServer):
         S=[]
         for n,client in enumerate(clients):
             w = client.get_weights()
-            w_flat = torch.cat([w[k].cpu().flatten() for k in w])
+            w_flat = torch.cat([w[k].flatten() for k in w])
             mu_n2 = (n*mu_n+w_flat)/(n+1)
             M_n= M_n+(w_flat-mu_n)*(w_flat-mu_n2)
             if(n!=0):
@@ -68,7 +68,7 @@ class FedBeServer(ABCServer):
         ################ Evaluate on local data #######################
         if self.verbose: print('FedBe: Evaluating ensambles on local data.')
         loss = NLLLoss(reduction  ='sum')
-        self.model.cpu().eval()
+        self.model.eval()
         p=None
         X = []
         for w in S:

@@ -21,7 +21,7 @@ class FedAgServer(ProbabilisticServer):
         M_n = 0
         for n,client in enumerate(clients):
             w = client.get_weights()
-            w_flat = torch.cat([w[k].cpu().flatten() for k in w])
+            w_flat = torch.cat([w[k].flatten() for k in w])
             mu_n2 = (n*mu_n+w_flat)/(n+1)
             M_n= M_n+(w_flat-mu_n)*(w_flat-mu_n2)
             if(n!=0):

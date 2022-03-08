@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from Servers.ProbabilisticServer import ProbabilisticServer
 from random import sample
+from tqdm import tqdm
 
 class Algorithm():
     def __init__(self,server,clients, callbacks=None, save_callbacks=False,clients_per_round=None):
@@ -29,7 +30,7 @@ class Algorithm():
             print('---------------- Round {} ----------------'.format(round + 1))
             self.callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
             client_sample = self.sample_clients()
-            for client in client_sample:
+            for i, client in enumerate(tqdm(client_sample)):
                 loss = client.train(epochs = epochs, device = device)
             self.server.aggregate(client_sample)
             if (self.callbacks != None): self._run_callbacks()
@@ -50,6 +51,7 @@ class Algorithm():
 
     def _run_callbacks(self):
         for name, callback in self.callbacks:
+            print('Running callback: {}'.format(name))
             new_values = callback(self)
             for key, value in new_values.items():
                 self.callback_data[name][key].append(value)

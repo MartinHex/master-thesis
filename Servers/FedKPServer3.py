@@ -6,7 +6,7 @@ import random
 import warnings
 
 class FedKPServer(ProbabilisticServer):
-    def __init__(self,model,shrinkage=1,store_distributions = True):
+    def __init__(self,model,shrinkage=1,store_distributions = False):
         super().__init__(model)
         w = model.get_weights()
         self.layers = list(w)
@@ -21,7 +21,7 @@ class FedKPServer(ProbabilisticServer):
         if self.store_distributions:
             self.likelihood = [gaussian_kde([-1,0,1],1)for i in range(self.model_size)]
             self.stats = [[-1,1,0,1] for i in range(self.model_size)]
-        self.prior = [gaussian_kde([-1,0,1],1) for i in range(self.model_size)]
+            self.prior = [gaussian_kde([-1,0,1],1) for i in range(self.model_size)]
 
         # Parameters for covariance adjustments
         self.beta = shrinkage
@@ -131,9 +131,10 @@ class FedKPServer(ProbabilisticServer):
     def _cov_adj_weight(self, w,w_0):
         current_delta = w_0.sub(w[0])
         current_average = w_0.add(w[0]).div(2)
-        u = [torch.zeros(self.model_size)]
-        v = [torch.zeros(self.model_size)]
-        sum = torch.zeros(self.model_size)
+        device = w[0].get_device()
+        u = [torch.zeros(self.model_size).to(device)]
+        v = [torch.zeros(self.model_size).to(device)]
+        sum = torch.zeros(self.model_size).to(device)
         # Produce the desired gradient online and at any-time as described in appendix C by Al-Shedivat et al.
         # (https://arxiv.org/pdf/2010.05273.pdf)
         for i in range(1,len(w)):

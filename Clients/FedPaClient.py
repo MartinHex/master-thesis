@@ -16,7 +16,7 @@ class FedPaClient(Base_Client):
         self.beta = shrinkage
         self.shrinkage = shrinkage
 
-    def train(self,epochs=1):
+    def train(self,epochs=1, device = None):
         initial_weights = self.model.get_weights()
         # Burn in phase
         self.model.train_model(self.dataloader,self.optimizer,epochs = self.burn_in) if self.burn_in > 0 else None
@@ -29,13 +29,13 @@ class FedPaClient(Base_Client):
         # (https://arxiv.org/pdf/2010.05273.pdf)
         for i in range(self.mcmc_samples):
             t = i + 1
-            weight_sample = self._produce_iasg_sample()
+            weight_sample = self._produce_iasg_sample(device)
             for key in weight_sample.keys():
                 if i == 0:
                     current_average[key] = weight_sample[key]
                     current_delta[key] = weights_after_burn_in[key].sub(current_average[key])
-                    v[key].append(torch.empty(weight_sample[key].shape))
-                    u[key].append(torch.empty(weight_sample[key].shape))
+                    v[key].append(torch.empty(weight_sample[key].shape).to(device))
+                    u[key].append(torch.empty(weight_sample[key].shape).to(device))
                 else:
                     u[key].append(weight_sample[key].sub(current_average[key]))
                     for k in range(i - 1):
@@ -58,10 +58,10 @@ class FedPaClient(Base_Client):
             new_weights[key] = initial_weights[key].sub(current_delta[key] / self.shrinkage) #Gradient from Equation 24
         return new_weights
 
-    def _produce_iasg_sample(self):
+    def _produce_iasg_sample(self, device):
         averaged_weights = dict()
         for i in range(self.K):
-            self.model.train_model(self.dataloader,self.optimizer,epochs = 1)
+            self.model.train_model(self.dataloader,self.optimizer,epochs = 1, device = device)
             weights = self.model.get_weights()
             for key in weights.keys():
                 if i == 0:

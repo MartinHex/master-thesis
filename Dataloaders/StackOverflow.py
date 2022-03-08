@@ -30,7 +30,7 @@ class StackOverflow(FederatedDataLoader):
         root = os.path.join('data')
         if not os.path.exists(root): os.makedir(root)
         data_path = os.path.join(root,'Stackoverflow')
-        if not os.path.exists(data_path): os.makedir(data_path)
+        if not os.path.exists(data_path): os.mkdir(data_path)
         usr_cmnts_pth = os.path.join(data_path,'userEntries_%i_%i.json'%(n_entries,n_words))
         self.sequence_length=20
         self.number_of_clients = number_of_clients
