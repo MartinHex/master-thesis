@@ -1,4 +1,4 @@
-from Servers.FedKPServer3 import FedKPServer
+from Servers.FedKPServer import FedKPServer
 from Clients.SGDClient import SGDClient
 from Algorithms.Algorithm import Algorithm
 
