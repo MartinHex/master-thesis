@@ -32,7 +32,7 @@ class Algorithm():
             client_sample = self.sample_clients()
             for i, client in enumerate(tqdm(client_sample)):
                 loss = client.train(epochs = epochs, device = device)
-            self.server.aggregate(client_sample)
+            self.server.aggregate(client_sample,device=device)
             if (self.callbacks != None): self._run_callbacks()
             if option == 'mle' or not isinstance(self.server,ProbabilisticServer):
                 self.server.push_weights(self.clients)
