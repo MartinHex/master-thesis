@@ -55,9 +55,13 @@ class EMNIST_Model(nn.Module):
         self.eval()
         if (device!= None): self.to(device)
         if (device != None): input = input.to(device)
+        output = self(input)
+        if (device!= None):
+            self.to('cpu')
+            torch.cuda.empty_cache()
         return self(input)
 
-    def evaluate(self,dataloader,loss_func, device = None):
+    def evaluate(self,dataloader,loss_func, device = None,take_mean=True):
         """Evaluates the model on a given loss function.
 
             Arguments:
@@ -65,7 +69,7 @@ class EMNIST_Model(nn.Module):
                 - loss_func: Loss function to use for evaluation.
         """
         self.eval() # prep model for evaluation
-        server_loss = 0
+        loss_per_batch = []
         if (device!= None): self.to(device)
         for data, target in dataloader:
             if(device!= None):
@@ -76,9 +80,14 @@ class EMNIST_Model(nn.Module):
             # calculate the loss
             loss = loss_func(output[0], target)
             # update running validation loss
-            server_loss += loss.item()/data.size(0)
-        server_loss = server_loss/len(dataloader)
-        return server_loss
+            loss_per_batch.append(loss.item()/data.size(0))
+        if (device!= None):
+            self.to('cpu')
+            torch.cuda.empty_cache()
+        if(take_mean):
+            return torch.mean(loss_per_batch)
+        else:
+            return loss_per_batch
 
     def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),
                     epochs = 1,device=None):
@@ -108,6 +117,9 @@ class EMNIST_Model(nn.Module):
                 loss.backward()
                 # apply gradients
                 optimizer.step()
+        if (device!= None):
+            self.to('cpu')
+            torch.cuda.empty_cache()
         return loss.item()
 
     def get_weights(self):

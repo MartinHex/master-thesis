@@ -41,15 +41,19 @@ class StackOverflow_Model(nn.Module):
             state_h = state_h.to(device)
             state_c = state_c.to(device)
             input = input.to(device)
-        return self(input, (state_h, state_c))
+        output = self(input, (state_h, state_c))
+        if (device!= None):
+            self.to('cpu')
+            torch.cuda.empty_cache()
+        return output
 
     def init_state(self):
         return (torch.zeros(self.num_layers, self.sequence_length, self.lstm_size),
                 torch.zeros(self.num_layers, self.sequence_length, self.lstm_size))
 
-    def evaluate(self,dataloader,loss_func=nn.CrossEntropyLoss(), device = None):
+    def evaluate(self,dataloader,loss_func=nn.CrossEntropyLoss(), device = None, take_mean=True):
         self.eval() # prep model for evaluation
-        avg_loss = 0
+        loss_per_batch = []
         state_h, state_c = self.init_state()
         if (device!= None):
             self.to(device)
@@ -63,9 +67,14 @@ class StackOverflow_Model(nn.Module):
             y_pred, (state_h, state_c) = self(x, (state_h, state_c))
             loss = loss_func(y_pred.transpose(1, 2), y)
             # update running validation loss
-            avg_loss += loss.item()/x.size(0)
-        avg_loss = avg_loss/len(dataloader)
-        return avg_loss
+            loss_per_batch.append(loss.item()/x.size(0))
+        if (device!= None):
+            self.to('cpu')
+            torch.cuda.empty_cache()
+        if take_mean:
+            return torch.mean(loss_per_batch)
+        else:
+            return loss_per_batch
 
     def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),
                     epochs = 1,device=None):
@@ -90,6 +99,9 @@ class StackOverflow_Model(nn.Module):
                 loss.backward()
                 # apply gradients
                 optimizer.step()
+        if (device!= None):
+            self.to('cpu')
+            torch.cuda.empty_cache()
         return loss.item()
 
 
