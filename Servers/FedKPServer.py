@@ -124,35 +124,44 @@ class FedKPServer(ProbabilisticServer):
         res_w = [mean_w.detach() for i in range(len(client_weights))]
         for i,w_0 in enumerate(client_weights):
             w = [cw for j,cw in enumerate(client_weights) if j!=i]
-            cov_adj_w = self._cov_adj_weight(w,w_0.device=device)
+            cov_adj_w = self._cov_adj_weight(w,w_0,device=device)
             res_w[i] = res_w[i].add(cov_adj_w)
         return res_w
 
     def _cov_adj_weight(self, w,w_0,device=None):
         device = device if device !=None else 'cpu'
         w_0.to(device)
-        current_delta = w_0.sub(w[0])
-        current_average = w_0.add(w[0]).div(2)
-        u = [torch.zeros(self.model_size).to(device)]
-        v = [torch.zeros(self.model_size).to(device)]
+        current_delta = w_0.sub(w[0]).to(device)
+        current_average = w[0].to(device)
+        u_t = w[1].sub(current_average)
+        v = [u_t]
+        gamma_factors = []
         sum = torch.zeros(self.model_size).to(device)
         # Produce the desired gradient online and at any-time as described in appendix C by Al-Shedivat et al.
         # (https://arxiv.org/pdf/2010.05273.pdf)
-        for i in range(1,len(w)):
+        for i in range(2,len(w)):
             w[i].to(device)
+            u_t = w[i].sub(current_average)
             t=i+1
-            u.append(w[i].sub(current_average))
-            for k in range(i - 1):
-                gamma_k = (self.beta * k) / (k + 1)
-                nominator = gamma_k * u[-1].matmul(v[k]).item()
-                denominator = 1 + gamma_k * u[k].matmul(v[k]).item()
-                sum = sum.add(v[k].mul(nominator / denominator))
-            v.append(u[i].sub(sum))
+            # Add to sum
+            gamma_k = (self.beta * i) / (i + 1)
+            nominator = gamma_k
+            denominator = 1 + gamma_k * u_t.matmul(v[-1]).item()
+            gamma_factors.append(gamma_k/denominator)
+            sum = torch.zeros(self.model_size).to(device)
+            for i,v_k in enumerate(v):
+                alpha = gamma_factors[i]+torch.matmul(v_k,u_t)
+                sum = sum.add(v_k,alpha=alpha)
+
+            # Update current weights
+            v_t = u_t.sub(sum)
+            v.append(v_t)
+            # Calculate adjusted delta
             current_average = w[i].add(current_average,alpha=i).div(i + 1)
             gamma_t = (self.beta * (t - 1)) / t
-            nominator = gamma_t * (t * u[i].matmul(current_delta) -u[i].matmul(v[i]))
-            denominator = 1 + gamma_t * v[i].matmul(u[i])
-            current_delta = current_delta.sub((1 + nominator / denominator).mul(v[i]).div(i + 1))
+            nominator = gamma_t * (t * u_t.matmul(current_delta) -u_t.matmul(v_t))
+            denominator = 1 + gamma_t * v_t.matmul(u_t)
+            current_delta = current_delta.sub((1 + nominator / denominator).mul(v_t).div(i + 1))
 
         new_weights = w_0.sub(current_delta.div(self.shrinkage)).to('cpu')
         return new_weights
