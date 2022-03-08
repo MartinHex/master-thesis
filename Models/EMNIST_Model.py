@@ -81,7 +81,7 @@ class EMNIST_Model(nn.Module):
         return server_loss
 
     def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),
-                    epochs = 1,device=None):
+                    epochs = 1,device=None, generator = False):
         """Trains the models a set number of epochs.
 
             Arguments:
@@ -108,6 +108,7 @@ class EMNIST_Model(nn.Module):
                 loss.backward()
                 # apply gradients
                 optimizer.step()
+                if generator: yield self.get_weights()
         return loss.item()
 
     def get_weights(self):
