@@ -6,9 +6,10 @@ from datetime import datetime
 from Servers.ProbabilisticServer import ProbabilisticServer
 from random import sample
 from tqdm import tqdm
+import copy
 
 class Algorithm():
-    def __init__(self,server,Client, Model, dataloaders, callbacks=None, save_callbacks=False,clients_per_round=None):
+    def __init__(self,server,client, dataloaders, callbacks=None, save_callbacks=False,clients_per_round=None):
         self.callbacks = callbacks if callbacks!=None else []
         self.dataloaders = dataloaders
         self.clients_per_round = len(dataloaders) if clients_per_round==None else clients_per_round
@@ -20,7 +21,7 @@ class Algorithm():
         for name, callback in self.callbacks:
             self.callback_data[name] = defaultdict(lambda: [])
         self.callback_data['timestamps'] = []
-        self.clients = [Client(Model(), None) for i in range(self.clients_per_round)]
+        self.clients = [copy.deepcopy(client) for i in range(self.clients_per_round)]
 
     def run(self,iterations, epochs = 1, device = None,option = 'mle'):
         if(option not in ['mle','single_sample','multi_sample']):

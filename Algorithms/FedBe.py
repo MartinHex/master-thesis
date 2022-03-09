@@ -18,5 +18,6 @@ class FedBe(Algorithm):
                 else:
                     adj_dataloader.append((x,y))
             client_dataloaders_adj.append(adj_dataloader)
+        client = SGDClient(Model(), None)
         server = FedBeServer(Model(),loc_data)
-        super().__init__(server,SGDClient, Model, client_dataloaders_adj, callbacks, save_callbacks,clients_per_round=clients_per_round)
+        super().__init__(server, client, client_dataloaders_adj, callbacks, save_callbacks,clients_per_round=clients_per_round)
