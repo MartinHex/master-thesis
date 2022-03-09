@@ -7,6 +7,7 @@ from Servers.ProbabilisticServer import ProbabilisticServer
 from random import sample
 from tqdm import tqdm
 import copy
+import threading
 
 class Algorithm():
     def __init__(self,server,client, dataloaders, callbacks=None, save_callbacks=False,clients_per_round=None):
@@ -23,7 +24,7 @@ class Algorithm():
         self.callback_data['timestamps'] = []
         self.clients = [copy.deepcopy(client) for i in range(self.clients_per_round)]
 
-    def run(self,iterations, epochs = 1, device = None,option = 'mle'):
+    def run(self,iterations, epochs = 1, device = None,option = 'mle',n_workers=3):
         if(option not in ['mle','single_sample','multi_sample']):
             raise Exception("""Incorrect option provided must be either 'mle', 'single_sample' or 'multi_sample'""")
         self.start_time = datetime.now()
@@ -33,16 +34,41 @@ class Algorithm():
             self.callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
             if option == 'single_sample': self.server.set_weights(self.server.sample_model())
             dataloader_sample = self.sample_dataloaders()
-            for i, dataloader in enumerate(tqdm(dataloader_sample)):
-                # Initialize Client to run
-                self.clients[i].dataloader = dataloader
-                self._set_model_weight(i, option)
-                loss = self.clients[i].train(epochs = epochs, device = device)
+
+
+            # Parallize threading
+            dataloader_sample_batched = [dataloader_sample[(i*n_workers):((i+1)*n_workers)]
+                                        for i in range(len(dataloader_sample)//n_workers+1)]
+            for sample in tqdm(dataloader_sample_batched):
+                thread_list = []
+                losses = []
+                for i, dataloader in enumerate(sample):
+                    thread = threading.Thread(target=self._train_client,
+                                    args=(i,dataloader,option,epochs,device,losses))
+                    thread_list.append(thread)
+                for thread in thread_list:
+                    thread.start()
+                for thread in thread_list:
+                    thread.join()
+
+            # for i, dataloader in enumerate(tqdm(dataloader_sample)):
+            #     # Initialize Client to run
+            #     self.clients[i].dataloader = dataloader
+            #     self._set_model_weight(i, option)
+            #     loss = self.clients[i].train(epochs = epochs, device = device)
+
             self.server.aggregate(self.clients, device=device)
             if (self.callbacks != None): self._run_callbacks()
 
         if self.save_callbacks: self._save_callbacks()
         return None
+
+    def _train_client(self,i,dataloader,option,epochs,device,losses):
+        # Initialize Client to run
+        self.clients[i].dataloader = dataloader
+        self._set_model_weight(i, option)
+        loss = self.clients[i].train(epochs = epochs, device = device)
+        losses.append(loss)
 
     def get_callback_data(self,key):
         return self.callback_data[key]

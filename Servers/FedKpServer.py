@@ -7,7 +7,7 @@ from tqdm import tqdm
 import warnings
 
 class FedKpServer(ProbabilisticServer):
-    def __init__(self,model,shrinkage=1,store_distributions = False):
+    def __init__(self,model,shrinkage=1,store_distributions = False,cov_adj = True):
         super().__init__(model)
         w = model.get_weights()
         self.layers = list(w)
@@ -15,6 +15,7 @@ class FedKpServer(ProbabilisticServer):
         self.layer_size = [len(w[k].flatten()) for k in w]
         self.model_size = sum(self.layer_size)
         self.layer_shapes = [w[k].size() for k in w]
+        self.cov_adj = cov_adj
         self.store_distributions = store_distributions
 
         # Initiate weights and distribution
@@ -28,12 +29,12 @@ class FedKpServer(ProbabilisticServer):
         self.beta = shrinkage
         self.shrinkage = shrinkage
 
-    def aggregate(self, clients,cov_adj = True,device=None):
+    def aggregate(self, clients,device=None):
         # List and translate data into numpy matrix
         client_weights = [c.get_weights() for c in clients]
         client_weights = torch.stack([self._model_weight_to_array(c.get_weights())for c in clients])
         print('Aggregating Models.')
-        if(cov_adj):
+        if(self.cov_adj):
             client_weights = self._cov_adj_client_weights(client_weights,device=device)
             client_weights = torch.stack(client_weights)
         # Kernel Esstimation
