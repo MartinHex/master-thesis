@@ -29,7 +29,7 @@ class FedPaClient(Base_Client):
         sample_done = False
         t = 0
         sample_weight = dict()
-        for i, weights in enumerate(self.model.train_model(self.dataloader,self.optimizer,epochs = epochs, generator = True)):
+        for i, weights in enumerate(self.model.iter_train_model(self.dataloader,self.optimizer,epochs = epochs, generator = True)):
             # Check if last step of burn in
             if (i == burn_in_steps):
                 for key in weights.keys():

@@ -1,10 +1,11 @@
 import torch
-from torch import nn,optim
-import argparse
-import numpy as np
-import copy
+from torch import nn
+from Models.nn_Model import nn_Model
 
-class StackOverflow_Model(nn.Module):
+
+
+
+class StackOverflow_Model(nn_Model):
     def __init__(self, n_vocab=10004,sequence_length=20):
         super().__init__()
         self.lstm_size = 670
@@ -77,7 +78,7 @@ class StackOverflow_Model(nn.Module):
             return loss_per_batch
 
     def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),
-                    epochs = 1,device=None, generator = False):
+                    epochs = 1,device=None):
         if (device!= None): self.to(device)
         self.train()
         for epoch in range(epochs):
@@ -99,16 +100,36 @@ class StackOverflow_Model(nn.Module):
                 loss.backward()
                 # apply gradients
                 optimizer.step()
-                if generator: yield self.get_weights()
         if (device!= None):
             self.to('cpu')
             torch.cuda.empty_cache()
         return loss.item()
 
-
-
-    def get_weights(self):
-        return  copy.deepcopy(self.state_dict())
-
-    def set_weights(self, model_state):
-        self.load_state_dict(copy.deepcopy(model_state))
+    def iter_train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),
+                    epochs = 1,device=None):
+        if (device!= None): self.to(device)
+        self.train()
+        for epoch in range(epochs):
+            state_h, state_c = self.init_state()
+            if(device!= None):
+                state_h = state_h.to(device)
+                state_c = state_c.to(device)
+            for batch, (x, y) in enumerate(dataloader):
+                if(device!= None):
+                    x = x.to(device)
+                    y = y.to(device)
+                # gives batch data, normalize x when iterate train_loader
+                y_pred, (state_h, state_c) = self(x, (state_h, state_c))
+                loss = loss_func(y_pred.transpose(1, 2), y)
+                # Detatch reference for maintaining graph-structure
+                state_h = state_h.detach()
+                state_c = state_c.detach()
+                # backpropagation, compute gradients
+                loss.backward()
+                # apply gradients
+                optimizer.step()
+                yield self.get_weights()
+        if (device!= None):
+            self.to('cpu')
+            torch.cuda.empty_cache()
+        return loss.item()
