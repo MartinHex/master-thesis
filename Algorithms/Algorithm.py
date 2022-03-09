@@ -8,11 +8,11 @@ from random import sample
 from tqdm import tqdm
 
 class Algorithm():
-    def __init__(self,server,clients, callbacks=None, save_callbacks=False,clients_per_round=None):
+    def __init__(self,server,Client, Model, dataloaders, callbacks=None, save_callbacks=False,clients_per_round=None):
         self.callbacks = callbacks if callbacks!=None else []
-        self.clients = clients
-        self.clients_per_round = len(clients) if clients_per_round==None else clients_per_round
-        if( len(clients)<self.clients_per_round):
+        self.dataloaders = dataloaders
+        self.clients_per_round = len(dataloaders) if clients_per_round==None else clients_per_round
+        if( len(dataloaders)<self.clients_per_round):
             raise Exception('More clients per round than clients provided.')
         self.server = server
         self.save_callbacks = save_callbacks
@@ -20,28 +20,25 @@ class Algorithm():
         for name, callback in self.callbacks:
             self.callback_data[name] = defaultdict(lambda: [])
         self.callback_data['timestamps'] = []
+        self.clients = [Client(Model(), None) for i in range(self.clients_per_round)]
 
     def run(self,iterations, epochs = 1, device = None,option = 'mle'):
         if(option not in ['mle','single_sample','multi_sample']):
             raise Exception("""Incorrect option provided must be either 'mle', 'single_sample' or 'multi_sample'""")
         self.start_time = datetime.now()
-        self.server.push_weights(self.clients)
+        #self.server.push_weights(self.clients)
         for round in range(iterations):
             print('---------------- Round {} ----------------'.format(round + 1))
             self.callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
-            client_sample = self.sample_clients()
-            for i, client in enumerate(tqdm(client_sample)):
-                loss = client.train(epochs = epochs, device = device)
-            self.server.aggregate(client_sample,device=device)
+            if option == 'single_sample': self.server.set_weights(self.server.sample_model())
+            dataloader_sample = self.sample_dataloaders()
+            for i, dataloader in enumerate(tqdm(dataloader_sample)):
+                # Initialize Client to run
+                self.clients[i].dataloader = dataloader
+                self._set_model_weight(i, option)
+                loss = self.clients[i].train(epochs = epochs, device = device)
+            self.server.aggregate(self.clients, device=device)
             if (self.callbacks != None): self._run_callbacks()
-            if option == 'mle' or not isinstance(self.server,ProbabilisticServer):
-                self.server.push_weights(self.clients)
-            elif option =='single_sample':
-                self.server.set_weights(elf.server.sample_model())
-                self.server.push_weights(self.clients)
-            elif option =='multi_sample':
-                for client in self.clients:
-                    client.set_weights(self.server.sample_model())
 
         if self.save_callbacks: self._save_callbacks()
         return None
@@ -65,8 +62,16 @@ class Algorithm():
         with open(file_path, "w") as outfile:
             json.dump(self.callback_data, outfile)
 
-    def sample_clients(self):
-        if self.clients_per_round!=len(self.clients):
-            return sample(self.clients,self.clients_per_round)
+    def _set_model_weight(self, i, option):
+        if option == 'mle' or not isinstance(self.server,ProbabilisticServer):
+            self.clients[i].set_weights(self.server.get_weights())
+        elif option =='single_sample':
+            self.clients[i].set_weights(self.server.get_weights())
+        elif option =='multi_sample':
+            self.clients[i].set_weights(self.server.sample_model())
+
+    def sample_dataloaders(self):
+        if self.clients_per_round!=len(self.dataloaders):
+            return sample(self.dataloaders,self.clients_per_round)
         else:
-            return self.clients
+            return self.dataloaders
