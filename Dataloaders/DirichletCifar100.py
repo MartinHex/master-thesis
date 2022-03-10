@@ -13,7 +13,7 @@ class DirichletCifar100(FederatedDataLoader):
         by Reddi et al. (https://arxiv.org/pdf/2003.00295.pdf).
         Note when alpha and beta go to infinity we obtain a uniform distribution of data.
     '''
-    def __init__(self, number_of_clients, alpha = 0.1, beta = 10, download = True):
+    def __init__(self, number_of_clients, alpha = 0.1, beta = 10, download = True, seed = 1234):
         """Constructor
 
         Args:
@@ -23,6 +23,7 @@ class DirichletCifar100(FederatedDataLoader):
             download: whether to allow torchvision to download the dataset (default: True)
 
         """
+        np.random.seed(seed = seed)
         self.map_fine_to_coarse_label = [4,  1, 14,  8,  0,  6,  7,  7, 18,  3,
                                    3, 14,  9, 18,  7, 11,  3,  9,  7, 11,
                                    6, 11,  5, 10,  7,  6, 13, 15,  3, 15,
@@ -99,7 +100,7 @@ class DirichletCifar100(FederatedDataLoader):
 
             for index, (image, c, f) in enumerate(data):
                 data[index] = (transform(image), c, f)
-                
+
     def get_training_raw_data(self):
         """Get the training data in the same partition as in the dataloaders but in form of lists of Tensors
 

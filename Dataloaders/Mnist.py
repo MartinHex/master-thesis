@@ -13,7 +13,7 @@ class Mnist(FederatedDataLoader):
     The class splits the MNIST training data into the desired amount of client with a uniform distribution as default.
     To split the data in a non-IID fashion tune the alpha parameter to do a LDA with dirichlet parameter alpha.
     """
-    def __init__(self, number_of_clients,  download = True, alpha = 'inf'):
+    def __init__(self, number_of_clients,  download = True, alpha = 'inf', seed = 1234):
         """Constructor
 
         Args:
@@ -26,6 +26,7 @@ class Mnist(FederatedDataLoader):
             [torchvision.transforms.ToTensor()
             ])
         self.alpha = alpha
+        np.random.seed(seed = seed)
 
         self.number_of_clients = number_of_clients
 

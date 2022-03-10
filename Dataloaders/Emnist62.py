@@ -15,12 +15,13 @@ class EMNIST(FederatedDataLoader):
         - That the Federated EMNIST-62 (FEMNIST) dataset is present in ../data/femnist.
         - The data is split by using the method presented by Caldas et al. (https://github.com/TalwalkarLab/leaf)
     """
-    def __init__(self, number_of_clients, test_size = 0.3, data_path = None, test_path = None):
+    def __init__(self, number_of_clients, test_size = 0.3, data_path = None, test_path = None, seed = 1234):
         if data_path:
             self.data_path = data_path
         else:
             self.data_path = os.path.join('..', 'data', 'femnist' 'all_data')
 
+        np.random.seed(seed = seed)
         self.number_of_clients = number_of_clients
         self.test_size = int(self.number_of_clients * test_size)
 
@@ -63,7 +64,7 @@ class EMNIST(FederatedDataLoader):
         for client in tqdm(train_clients):
             file = all_clients[client]
             self.trainset.append(self._read_client(client, file))
-            print('Loading test clients...')
+        print('Loading test clients...')
         for client in tqdm(test_clients):
             file = all_clients[client]
             self.testset.append(self._read_client(client, file))
