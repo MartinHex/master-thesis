@@ -35,27 +35,11 @@ class Algorithm():
             if option == 'single_sample': self.server.set_weights(self.server.sample_model())
             dataloader_sample = self.sample_dataloaders()
 
-
-            # Parallize threading
-            dataloader_sample_batched = [dataloader_sample[(i*n_workers):((i+1)*n_workers)]
-                                        for i in range(len(dataloader_sample)//n_workers+1)]
-            for sample in tqdm(dataloader_sample_batched):
-                thread_list = []
-                losses = []
-                for i, dataloader in enumerate(sample):
-                    thread = threading.Thread(target=self._train_client,
-                                    args=(i,dataloader,option,epochs,device,losses))
-                    thread_list.append(thread)
-                for thread in thread_list:
-                    thread.start()
-                for thread in thread_list:
-                    thread.join()
-
-            # for i, dataloader in enumerate(tqdm(dataloader_sample)):
-            #     # Initialize Client to run
-            #     self.clients[i].dataloader = dataloader
-            #     self._set_model_weight(i, option)
-            #     loss = self.clients[i].train(epochs = epochs, device = device)
+            for i, dataloader in enumerate(tqdm(dataloader_sample)):
+                # Initialize Client to run
+                self.clients[i].dataloader = dataloader
+                self._set_model_weight(i, option)
+                loss = self.clients[i].train(epochs = epochs, device = device)
 
             self.server.aggregate(self.clients, device=device)
             if (self.callbacks != None): self._run_callbacks()
