@@ -7,7 +7,8 @@ from tqdm import tqdm
 import warnings
 
 class FedKpServer(ProbabilisticServer):
-    def __init__(self,model,shrinkage=1,store_distributions = False,cov_adj = True):
+    def __init__(self,model,shrinkage=1,store_distributions = False,cov_adj = False,
+                bandwidth = 'silverman' ):
         super().__init__(model)
         w = model.get_weights()
         self.layers = list(w)
@@ -17,6 +18,11 @@ class FedKpServer(ProbabilisticServer):
         self.layer_shapes = [w[k].size() for k in w]
         self.cov_adj = cov_adj
         self.store_distributions = store_distributions
+        # Set bandwidth function
+        if(bandwidth =='silverman'):
+            self.bandwidth_method = self._silverman
+        if(bandwidth =='scott'):
+            self.bandwidth_method = self._scott
 
         # Initiate weights and distribution
         self.MLE_weight = torch.zeros(self.model_size)
@@ -45,7 +51,7 @@ class FedKpServer(ProbabilisticServer):
                 self.likelihood[i] = gaussian_kde(x,bw_method='silverman')
 
         # Mean shift algorithm:
-        self.MLE_weight = self._mean_shift(client_weights)
+        self.MLE_weight = self._mean_shift(client_weights,device=device)
 
         res_model = self._array_to_model_weight(self.MLE_weight)
         self.model.set_weights(res_model)
@@ -138,7 +144,6 @@ class FedKpServer(ProbabilisticServer):
         u_t = w[1].sub(w[0]).to(device)
         v = [u_t]
         gamma_factors = []
-        sum = torch.zeros(self.model_size).to(device)
         # Produce the desired gradient online and at any-time as described in appendix C by Al-Shedivat et al.
         # (https://arxiv.org/pdf/2010.05273.pdf)
         for i in range(2,len(w)):
@@ -168,18 +173,51 @@ class FedKpServer(ProbabilisticServer):
         new_weights = w_0.sub(current_delta.div(self.shrinkage)).to('cpu')
         return new_weights
 
-    def _mean_shift(self,client_weights,tol=0.00001,max_iter = 100):
-        w = torch.mean(client_weights,0).reshape(1,self.model_size)
+    def _mean_shift(self,client_weights,tol=0.00001,max_iter = 10000,device=None):
+        H = self.bandwidth_method(client_weights,device=device)
+        w = torch.mean(client_weights,0).reshape(1,self.model_size).to(device)
+        dist = torch.zeros(len(client_weights))
         dif = tol+ 1
         i = 0
         while dif>tol and i<max_iter:
-            dist = torch.cdist(w,client_weights)
+            for i,client_w in enumerate(client_weights):
+                dif_tmp = (w-client_w.to(device)).div(H)
+                dist[i] = torch.norm(dif_tmp)
             exp_dist = torch.exp(-dist.div(self.model_size))
             denominator = torch.sum(exp_dist)
             m_x = exp_dist.matmul(client_weights).div(denominator)
-            dif =torch.cdist(w,m_x).item()
-            w = m_x
+            dif =torch.norm(w.sub(m_x)).item()
+            w = torch.clone(m_x)
             i+=1
         if(i>=max_iter):
             warnings.warn("Maximal iteration reacher. You may want to look into increasing the amount of iterations.")
-        return w[0]
+        return w
+
+    def _scott(self,client_weights,device=None):
+        n = len(client_weights)
+        sig = torch.std(client_weights,0).reshape(1,self.model_size).to(device)
+        d = len(client_weights[0])
+
+        return n**(-1/(d+4))*sig
+
+
+    def _silverman(self,client_weights,device=None):
+        n = len(client_weights)
+        sig = torch.std(client_weights,0).reshape(1,self.model_size).to(device)
+        d = len(client_weights[0])
+
+        return (4/(d+2))**(1/(d+4))*n**(-1/(d+4))*sig
+
+from Dataloaders.Mnist import Mnist as Dataloader
+from Models.MNIST_Model import MNIST_Model as Model
+from Clients.SGDClient import SGDClient
+torch.norm(dif_tmp)
+dl = Dataloader(100)
+clients = [SGDClient(Model(),d) for d in dl.get_training_dataloaders(16)]
+denominator
+server = FedKpServer(Model())
+exp_dist/torch.prod(H)
+exp_dist
+dist
+server.aggregate(clients)
+clients.
