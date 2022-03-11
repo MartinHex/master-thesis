@@ -1,5 +1,6 @@
 from Servers.FedAvgServer import FedAvgServer
 from Clients.FedPaClient import FedPaClient
+from Clients.SGDClient import SGDClient
 from Algorithms.Algorithm import Algorithm
 
 class FedPa(Algorithm):
@@ -19,12 +20,18 @@ class FedPa(Algorithm):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
 
-        client = FedPaClient(Model(), None,
+        self.fedPa_client = FedPaClient(Model(), None,
                         learning_rate = client_lr,
                         burn_in =  burn_in,
                         K = K,
                         shrinkage = shrinkage,
                         mcmc_samples = mcmc_samples,
+                        momentum=momentum,
+                        decay=momentum,
+                        dampening=dampening)
+
+        self.SGD_client = SGDClient(Model(), None,
+                        learning_rate = client_lr,
                         momentum=momentum,
                         decay=momentum,
                         dampening=dampening)
@@ -36,5 +43,38 @@ class FedPa(Algorithm):
                             b1=b1,
                             b2=b2,
                             momentum=server_momentum)
-                            
-        super().__init__(server, client, client_dataloaders, callbacks, save_callbacks,clients_per_round=clients_per_round)
+
+        super().__init__(server, SGD_client, client_dataloaders, callbacks, save_callbacks,clients_per_round=clients_per_round)
+
+    def run(self,iterations,burnin=0, epochs = 1, device = None,option = 'mle',n_workers=3):
+        if(option not in ['mle','single_sample','multi_sample']):
+            raise Exception("""Incorrect option provided must be either 'mle', 'single_sample' or 'multi_sample'""")
+        if(burnin>iterations or burnin<0):
+            raise Exception('Burnin larger than number of iterations')
+        self.start_time = datetime.now()
+        #self.server.push_weights(self.clients)
+        self.clients = [copy.deepcopy(self.SGD_client) for i in range(self.clients_per_round)]
+        for round in range(iterations):
+            if(round==burnin):
+                self.clients = [copy.deepcopy(self.fedPa_client) for i in range(self.clients_per_round)]
+
+            print('---------------- Round {} ----------------'.format(round + 1))
+            self.callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+
+            if option == 'single_sample': self.server.set_weights(self.server.sample_model())
+            dataloader_sample = self.sample_dataloaders()
+
+            for i, dataloader in enumerate(tqdm(dataloader_sample)):
+                # Initialize Client to run
+                if(round>burnin):
+                    self.clients[i].dataloader = dataloader
+                else:
+
+                self._set_model_weight(i, option)
+                loss = self.clients[i].train(epochs = epochs, device = device)
+
+            self.server.aggregate(self.clients, device=device)
+            if (self.callbacks != None): self._run_callbacks()
+
+        if self.save_callbacks: self._save_callbacks()
+        return None
