@@ -73,32 +73,35 @@ class FedBeServer(ABCServer):
         for w in S:
             self.model.set_weights(w)
             nll = self.model.evaluate(self.loc_data,loss_func=loss,take_mean=False,device=device)
-            res = torch.exp(torch.Tensor(nll)).to('cpu')
+            res = torch.exp(torch.Tensor(nll)).to(device)
             if(p == None):
-                p = torch.zeros(len(res))
+                p = torch.zeros(len(res)).to(device)
             p = p.add(res)
-        p = p.div(len(S))
+        p = p.div(len(S)).to(device)
 
         ############## SWA ############################
         if self.verbose: print('FedBE: Running SWA')
 
         # initiate and run SWA
         self.model.set_weights(mu_r)
-        self.model.to('cpu')
+        self.model.to(device)
         self.model.train()
         base_opt = torch.optim.SGD(self.model.parameters(), lr=self.swa_lr1)
         opt = SWA(base_opt, swa_start=5, swa_freq=self.swa_freq, swa_lr=self.swa_lr2)
         for i in range(self.swa_epochs):
              for j,(x,y) in enumerate(self.loc_data):
+                 x = x.to(device)
+                 y = y.to(device)
                  opt.zero_grad()
                  # To set average loss, we predict to set graph gradients
                  # Multiply the result by zero and add the average loss to get
                  # the propper backpropagation.
                  pred = self.model.forward(x)[0]
-                 tmp_loss=torch.mean(pred)*0-p[j]
+                 tmp_loss=(torch.mean(pred)*0-p[j])
                  tmp_loss.backward()
                  opt.step()
              if self.verbose: print('FedBE: Epoch %i: loss: %.4f'%(i,(-tmp_loss.item())))
 
         if self.verbose: print('FedBE: SWA Destilation done, updating model weights.')
+        self.model.to('cpu')
         return self.get_weights()
