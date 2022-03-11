@@ -4,8 +4,8 @@ from torch.distributions import Normal
 
 class FedAgServer(ProbabilisticServer):
 
-    def __init__(self,model):
-        super().__init__(model)
+    def __init__(self,model,lr=1,tau=0.1,b1=.9,b2=0.99,momentum=1,optimizer='none'):
+        super().__init__(model,optimizer = optimizer,lr=lr,tau=tau,b1=b1,b2=b2,momentum=momentum)
         w = model.get_weights()
         # Set initial distributions
         w_flat = torch.cat([w[k].flatten() for k in w])
@@ -15,7 +15,7 @@ class FedAgServer(ProbabilisticServer):
         self.model_shapes = [w[k].size() for k in w]
         self.model_size = sum(self.tens_lengths)
 
-    def aggregate(self, clients,device=None):
+    def combine(self, clients,device=None):
         # Dynamically calculate mean and variance of server weights.
         device = device if device!=None else 'cpu'
         mu_n = torch.zeros(self.model_size).to(device)
@@ -35,10 +35,9 @@ class FedAgServer(ProbabilisticServer):
         self.distribution = Normal(mu_n,s_n)
 
         # reconstruct weights using EM esstimate (mean)
-        w_r = torch.split(mu_n,self.tens_lengths)
-        w_r = {k:torch.reshape(w_r[i],self.model_shapes[i]) for i,k in enumerate(w)}
-        self.set_weights(w_r)
-        self.model.to('cpu')
+        w_new = torch.split(mu_n,self.tens_lengths)
+        w_new = {k:torch.reshape(w_new[i],self.model_shapes[i]) for i,k in enumerate(w)}
+        return w_new
 
     def sample_model(self):
         w_r = self.distribution.sample()

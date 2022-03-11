@@ -31,7 +31,7 @@ class FedBeServer(ABCServer):
         self.verbose = verbose
 
 
-    def aggregate(self, clients,device=None):
+    def combine(self, clients,device=None):
         # Dynamically calculate mean and variance of server weights.
         if self.verbose: print('FedBe: Reading in clients.')
         device = device if device!=None else 'cpu'
@@ -101,4 +101,4 @@ class FedBeServer(ABCServer):
              if self.verbose: print('FedBE: Epoch %i: loss: %.4f'%(i,(-tmp_loss.item())))
 
         if self.verbose: print('FedBE: SWA Destilation done, updating model weights.')
-        opt.swap_swa_sgd()
+        return self.get_weights()

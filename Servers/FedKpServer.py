@@ -35,7 +35,7 @@ class FedKpServer(ProbabilisticServer):
         self.beta = shrinkage
         self.shrinkage = shrinkage
 
-    def aggregate(self, clients,device=None):
+    def combine(self, clients,device=None):
         # List and translate data into numpy matrix
         client_weights = [c.get_weights() for c in clients]
         client_weights = torch.stack([self._model_weight_to_array(c.get_weights())for c in clients])
@@ -54,7 +54,7 @@ class FedKpServer(ProbabilisticServer):
         self.MLE_weight = self._mean_shift(client_weights,device=device)
 
         res_model = self._array_to_model_weight(self.MLE_weight)
-        self.model.set_weights(res_model)
+        return res_model
 
     def sample_model(self):
         if(self.store_distributions):
