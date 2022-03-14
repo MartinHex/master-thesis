@@ -35,7 +35,7 @@ class FedAgServer(ProbabilisticServer):
         self.distribution = Normal(mu_n,s_n)
 
         # reconstruct weights using EM esstimate (mean)
-        w_new = torch.split(mu_n,self.tens_lengths)
+        w_new = torch.split(mu_n.to('cpu'),self.tens_lengths)
         w_new = {k:torch.reshape(w_new[i],self.model_shapes[i]) for i,k in enumerate(w)}
         return w_new
 

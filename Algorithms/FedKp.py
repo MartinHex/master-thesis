@@ -35,11 +35,11 @@ class FedKp(Algorithm):
                             store_distributions = store_distributions,
                             cov_adj = cov_adj,
                             bandwidth=bandwidth,
-                            server_optimizer=server_optimizer,
-                            server_lr=server_lr,
+                            optimizer=server_optimizer,
+                            lr=server_lr,
                             tau=tau,
                             b1=b1,
                             b2=b2,
-                            server_momentum=server_momentum)
+                            momentum=server_momentum)
 
         super().__init__(server, client, client_dataloaders, callbacks, save_callbacks,clients_per_round=clients_per_round)

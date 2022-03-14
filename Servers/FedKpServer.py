@@ -8,7 +8,10 @@ import warnings
 
 class FedKpServer(ProbabilisticServer):
     def __init__(self,model,shrinkage=1,store_distributions = False,cov_adj = False,
-                bandwidth = 'silverman' ):
+                bandwidth = 'silverman',lr=1,tau=0.1,b1=.9,b2=0.99,momentum=1,
+                optimizer='none'):
+
+        super().__init__(model,optimizer = optimizer,lr=lr,tau=tau,b1=b1,b2=b2,momentum=momentum)
         super().__init__(model)
         w = model.get_weights()
         self.layers = list(w)
@@ -46,7 +49,6 @@ class FedKpServer(ProbabilisticServer):
         # Kernel Esstimation
         if self.store_distributions:
             for i in range(self.model_size):
-                x = client_weights[:,i]
                 self.stats[i] = [torch.min(x),torch.max(x),torch.mean(x),torch.std(x)]
                 self.likelihood[i] = gaussian_kde(x,bw_method='silverman')
 
@@ -173,51 +175,42 @@ class FedKpServer(ProbabilisticServer):
         new_weights = w_0.sub(current_delta.div(self.shrinkage)).to('cpu')
         return new_weights
 
-    def _mean_shift(self,client_weights,tol=0.00001,max_iter = 10000,device=None):
+    def _mean_shift(self,client_weights,tol=0.000001,max_iter = 10000,device=None):
         H = self.bandwidth_method(client_weights,device=device)
-        w = torch.mean(client_weights,0).reshape(1,self.model_size).to(device)
-        dist = torch.zeros(len(client_weights))
+        w = torch.mean(client_weights,0).to(device)
+        #print(w)
         dif = tol+ 1
         i = 0
-        while dif>tol and i<max_iter:
+        while i<10:
+            denominator= torch.zeros(self.model_size).to(device)
+            numerator = torch.zeros(self.model_size).to(device)
             for i,client_w in enumerate(client_weights):
-                dif_tmp = (w-client_w.to(device)).div(H)
-                dist[i] = torch.norm(dif_tmp)
-            exp_dist = torch.exp(-dist.div(self.model_size))
-            denominator = torch.sum(exp_dist)
-            m_x = exp_dist.matmul(client_weights).div(denominator)
-            dif =torch.norm(w.sub(m_x)).item()
+                w_i = client_w.to(device)
+                dif_tmp = (w-w_i)/H
+                dist = dif_tmp**2
+                exp_dist = torch.exp(-dist)
+                denominator += exp_dist
+                numerator += exp_dist*w_i
+            m_x = numerator/(denominator)
+            dif =torch.mean(torch.abs(w-m_x))
             w = torch.clone(m_x)
             i+=1
         if(i>=max_iter):
             warnings.warn("Maximal iteration reacher. You may want to look into increasing the amount of iterations.")
-        return w
+        #print(w)
+        return w.to('cpu')
 
     def _scott(self,client_weights,device=None):
         n = len(client_weights)
-        sig = torch.std(client_weights,0).reshape(1,self.model_size).to(device)
+        sig = torch.std(client_weights,0).to(device)
         d = len(client_weights[0])
 
-        return n**(-1/(d+4))*sig
+        return n**(-1/(d+4))*sig+0.000001
 
 
     def _silverman(self,client_weights,device=None):
         n = len(client_weights)
-        sig = torch.std(client_weights,0).reshape(1,self.model_size).to(device)
+        sig = torch.std(client_weights,0).to(device)
         d = len(client_weights[0])
 
-        return (4/(d+2))**(1/(d+4))*n**(-1/(d+4))*sig
-
-from Dataloaders.Mnist import Mnist as Dataloader
-from Models.MNIST_Model import MNIST_Model as Model
-from Clients.SGDClient import SGDClient
-torch.norm(dif_tmp)
-dl = Dataloader(100)
-clients = [SGDClient(Model(),d) for d in dl.get_training_dataloaders(16)]
-denominator
-server = FedKpServer(Model())
-exp_dist/torch.prod(H)
-exp_dist
-dist
-server.aggregate(clients)
-clients.
+        return (4/(d+2))**(1/(d+4))*n**(-1/(d+4))*sig+0.000001

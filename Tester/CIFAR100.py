@@ -18,13 +18,14 @@ from Clients.SGDClient import SGDClient
 from Models.Callbacks.Callbacks import Callbacks
 import matplotlib.pyplot as plt
 import torch
+import os
 
 
 number_of_clients = 500
 clients_per_round = 20
-batch_size = 16
+batch_size = 20
 alpha = 0.1
-beta = 100
+beta = 10
 dataloader = Dataloader(number_of_clients,alpha=alpha,beta=beta)
 test_data = dataloader.get_test_dataloader(batch_size)
 device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
@@ -32,12 +33,17 @@ device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
 # Create callback functions that are run at the end of every round
 print('Creating Callbacks')
 cbs_pa = Callbacks(test_data, device = device, verbose = True)
+cbs_avg = Callbacks(test_data, device = device, verbose = True)
 cbs_be = Callbacks(test_data, device = device, verbose = True)
 cbs_ag = Callbacks(test_data, device = device, verbose = True)
 cbs_kp = Callbacks(test_data, device = device, verbose = True)
 callbacks_pa = [
     ('server_pa_loss', cbs_pa.server_loss),
     ('server_pa_accuracy', cbs_pa.server_accuracy),
+]
+callbacks_avg = [
+    ('server_avg_loss', cbs_avg.server_loss),
+    ('server_avg_accuracy', cbs_avg.server_accuracy),
 ]
 callbacks_be = [
     ('server_be_loss', cbs_be.server_loss),
@@ -54,34 +60,50 @@ callbacks_kp = [
 
 # Initiate algorithms with same parameters as in papers.
 # Set parameters to replicate paper results
-print('Creating FedAG')
-fedag = FedAg(dataloader=dataloader, Model=Model, callbacks = callbacks_ag,
-    clients_per_round = clients_per_round, save_callbacks = True, batch_size = batch_size)
+# print('Creating FedAG')
+# fedag = FedAg(dataloader=dataloader, Model=Model, callbacks = callbacks_ag,client_lr = 0.01,
+#     clients_per_round = clients_per_round, save_callbacks = True, batch_size = batch_size,
+#     server_lr = 0.5,server_optimizer ='sgd',server_momentum=0.9)
 
 print('Creating FedBE')
-fedbe = FedBe(dataloader=dataloader, Model=Model, callbacks = callbacks_be,
-    clients_per_round = clients_per_round, save_callbacks = True, batch_size = batch_size)
+fedbe = FedBe(dataloader=dataloader, Model=Model, callbacks = callbacks_be,client_lr = 0.01,
+    clients_per_round = clients_per_round, save_callbacks = True, batch_size = batch_size,
+    p_validation=0.01,server_lr = 0.5,server_optimizer ='sgd',server_momentum=0.9)
 
 print('Creating FedPA')
 fedpa = FedPa(dataloader=dataloader, Model=Model, callbacks = callbacks_pa,
     clients_per_round = clients_per_round, save_callbacks = True,client_lr = 0.01,
-    burn_in =  0.8, shrinkage = 0.01,batch_size=batch_size)
+    shrinkage = 0.01,batch_size=batch_size, server_lr = 0.5,
+    server_optimizer ='sgd', server_momentum=0.9,burnin=400)
+
+print('Creating FedAvg')
+fedavg = FedAvg(dataloader=dataloader, Model=Model, callbacks = callbacks_avg,
+    clients_per_round = clients_per_round, save_callbacks = True,client_lr = 0.01,
+    batch_size=batch_size,server_optimizer ='sgd', server_lr = 0.5,
+    server_momentum=0.9)
 
 print('Creating FedKP')
 fedkp = FedKp(dataloader=dataloader, Model=Model, callbacks = callbacks_kp,
-    clients_per_round = clients_per_round, save_callbacks = True,
-    cov_adj=False,batch_size = batch_size)
+    clients_per_round = clients_per_round, save_callbacks = True,client_lr = 0.01,
+    cov_adj=False,batch_size = batch_size, server_lr = 0.5,
+    server_optimizer ='sgd',server_momentum=0.9)
 
 alghs = [
-    fedbe,
-    fedag,
+    # fedag,
     fedpa,
+    fedavg,
+    fedbe,
     fedkp
 ]
 
 print('Initializing Clients')
+model_pth = os.path.join('data/Results/Models')
+out_path = os.path.join(model_pth,'initial_Model')
+torch.save(alghs[0].server.get_weights(),out_path)
 alghs[0].server.push_weights([alg.server for alg in alghs[1:]])
-iterations = 600
+iterations = 1000
 print('Running Algorithms')
-for alg in alghs:
-    alg.run(iterations, epochs = 5, device = device)
+for i,alg in enumerate(alghs):
+    alg.run(iterations, epochs = 10, device = device)
+    out_path = os.path.join(model_pth,'model_%i'%i)
+    torch.save(alg.server.get_weights(),out_path)

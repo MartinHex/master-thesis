@@ -12,17 +12,16 @@ class ABCServer(ABC):
         elif optimizer == 'adam':
             self.optimizer= Adam(lr=lr,tau=tau,b1=b1,b2=b2)
         else:
-            self.optimizer='none'
+            self.optimizer= SGD(lr = 1, momentum = 0)
 
     @abstractmethod
     def combine(self,clients):
         pass
 
-    def aggregate(self, clients):
+    def aggregate(self, clients,device=None):
         w_old = self.get_weights()
-        w_new = self.combine(clients)
-        if self.optimizer != 'none':
-            w_new = self.fedOpt(w_new,w_old)
+        w_new = self.combine(clients,device=device)
+        w_new = self.fedOpt(w_new,w_old)
         self.set_weights(w_new)
 
     def get_weights(self):
