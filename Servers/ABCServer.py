@@ -18,9 +18,9 @@ class ABCServer(ABC):
     def combine(self,clients):
         pass
 
-    def aggregate(self, clients,device=None):
+    def aggregate(self, clients,device=None, client_scaling = None):
         w_old = self.get_weights()
-        w_new = self.combine(clients,device=device)
+        w_new = self.combine(clients,device=device, client_scaling = client_scaling)
         w_new = self.fedOpt(w_new,w_old)
         self.set_weights(w_new)
 
