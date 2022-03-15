@@ -41,7 +41,8 @@ class Algorithm():
                 self._set_model_weight(i, option)
                 loss = self.clients[i].train(epochs = epochs, device = device)
 
-            self.server.aggregate(self.clients, device=device)
+            dataloader_sizes = [len(dataloader.dataset) for dataloader in dataloader_sample]
+            self.server.aggregate(self.clients, device=device, client_scaling = dataloader_sizes)
             if (self.callbacks != None): self._run_callbacks()
 
         if self.save_callbacks: self._save_callbacks()
