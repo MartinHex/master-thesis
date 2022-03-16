@@ -34,8 +34,14 @@ class EMNIST_Model(nn_Model):
         self.dense2 = nn.Linear(128, 62)
         self.softmax = nn.Softmax(dim = 1)
 
+        nn.init.xavier_normal_(self.conv1.weight)
+        nn.init.xavier_normal_(self.conv2.weight)
+        nn.init.xavier_normal_(self.dense1.weight)
+        nn.init.xavier_normal_(self.dense1.weight)
+
     def forward(self, x):
         x = self.conv1(x)
+        x = self.relu(x)
         x = self.conv2(x)
         x = self.relu(x)
         x = self.maxpool(x)
@@ -45,6 +51,7 @@ class EMNIST_Model(nn_Model):
         x = x.view(x.size(0), -1)
 
         x = self.dense1(x)
+        x = self.relu(x)
         x = self.dropout2(x)
         x = self.dense2(x)
         output = self.softmax(x)
