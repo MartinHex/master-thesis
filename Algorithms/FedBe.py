@@ -24,7 +24,9 @@ class FedBe(Algorithm):
                 tau=0.1,
                 b1=.9,
                 b2=0.99,
-                server_momentum=0):
+                server_momentum=1,
+                clients_sample_alpha = 'inf',
+                ):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
         # Set up local dataloader
@@ -60,4 +62,4 @@ class FedBe(Algorithm):
                             momentum=server_momentum)
 
         super().__init__(server, client, client_dataloaders_adj, callbacks,
-                            save_callbacks,clients_per_round=clients_per_round)
+                            save_callbacks,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)

@@ -8,9 +8,10 @@ from random import sample
 from tqdm import tqdm
 import copy
 import threading
+import numpy as np
 
 class Algorithm():
-    def __init__(self,server,client, dataloaders, callbacks=None, save_callbacks=False,clients_per_round=None):
+    def __init__(self,server,client, dataloaders, callbacks=None, save_callbacks=False,clients_per_round=None, clients_sample_alpha = 'inf'):
         self.callbacks = callbacks if callbacks!=None else []
         self.dataloaders = dataloaders
         self.clients_per_round = len(dataloaders) if clients_per_round==None else clients_per_round
@@ -23,6 +24,11 @@ class Algorithm():
             self.callback_data[name] = defaultdict(lambda: [])
         self.callback_data['timestamps'] = []
         self.clients = [copy.deepcopy(client) for i in range(self.clients_per_round)]
+        if clients_sample_alpha == 'inf':
+            self.client_probabilities = [1/len(dataloaders)] * (len(dataloaders))
+        else:
+            assert (clients_sample_alpha >= 0 and clients_sample_alpha <= 1), 'Client sample alpha must be in (0,1).'
+            self.client_probabilities = np.random.dirichlet([clients_sample_alpha] * len(dataloaders))
 
     def run(self,iterations, epochs = 1, device = None,option = 'mle',n_workers=3):
         if(option not in ['mle','single_sample','multi_sample']):
@@ -84,6 +90,12 @@ class Algorithm():
 
     def sample_dataloaders(self):
         if self.clients_per_round!=len(self.dataloaders):
-            return sample(self.dataloaders,self.clients_per_round)
+            dataloaders = np.random.choice(
+                self.dataloaders,
+                size = self.clients_per_round,
+                replace = False,
+                p = self.client_probabilities,
+                )
+            return dataloaders
         else:
             return self.dataloaders

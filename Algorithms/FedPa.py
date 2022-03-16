@@ -26,7 +26,9 @@ class FedPa(Algorithm):
                 b1=.9,
                 b2=0.99,
                 server_momentum=1,
-                burnin=0):
+                burnin=0,
+                clients_sample_alpha = 'inf',
+                ):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
 
@@ -59,7 +61,7 @@ class FedPa(Algorithm):
         self.burnin=burnin
         self.tot_rounds = 0
 
-        super().__init__(server, self.SGD_client, client_dataloaders, callbacks, save_callbacks,clients_per_round=clients_per_round)
+        super().__init__(server, self.SGD_client, client_dataloaders, callbacks, save_callbacks,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)
 
     def run(self,iterations, epochs = 1, device = None,option = 'mle',n_workers=3):
         if(option not in ['mle','single_sample','multi_sample']):
