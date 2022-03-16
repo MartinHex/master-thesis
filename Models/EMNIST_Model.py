@@ -38,6 +38,10 @@ class EMNIST_Model(nn_Model):
         nn.init.xavier_normal_(self.conv2.weight)
         nn.init.xavier_normal_(self.dense1.weight)
         nn.init.xavier_normal_(self.dense1.weight)
+        self.conv1.bias.data.fill_(0)
+        self.conv2.bias.data.fill_(0)
+        self.dense1.bias.data.fill_(0)
+        self.dense2.bias.data.fill_(0)
 
     def forward(self, x):
         x = self.conv1(x)
