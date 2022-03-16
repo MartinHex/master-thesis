@@ -24,7 +24,7 @@ class FedBe(Algorithm):
                 tau=0.1,
                 b1=.9,
                 b2=0.99,
-                server_momentum=0)):
+                server_momentum=0):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
         # Set up local dataloader

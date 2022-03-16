@@ -49,6 +49,7 @@ class FedKpServer(ProbabilisticServer):
         # Kernel Esstimation
         if self.store_distributions:
             for i in range(self.model_size):
+                x = client_weights[:,i]
                 self.stats[i] = [torch.min(x),torch.max(x),torch.mean(x),torch.std(x)]
                 self.likelihood[i] = gaussian_kde(x,bw_method='silverman')
 
@@ -76,7 +77,8 @@ class FedKpServer(ProbabilisticServer):
         return model_w
 
 
-    def plot_random_weights(self,shape):
+    def plot_random_weights(self,shape,seed = 1234):
+        random.seed(seed)
         if(self.store_distributions):
             nrow,ncol = shape
             size=nrow*ncol
@@ -184,7 +186,7 @@ class FedKpServer(ProbabilisticServer):
         while i<10:
             denominator= torch.zeros(self.model_size).to(device)
             numerator = torch.zeros(self.model_size).to(device)
-            for i,client_w in enumerate(client_weights):
+            for _,client_w in enumerate(client_weights):
                 w_i = client_w.to(device)
                 dif_tmp = (w-w_i)/H
                 dist = dif_tmp**2
