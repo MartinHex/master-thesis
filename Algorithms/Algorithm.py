@@ -39,6 +39,7 @@ class Algorithm():
                 # Initialize Client to run
                 self.clients[i].dataloader = dataloader
                 self._set_model_weight(i, option)
+                self.clients[i].reset_optimizer() # Reset optimizer so client momentum can be used, not momentum does not carry over between rounds
                 loss = self.clients[i].train(epochs = epochs, device = device)
 
             self.server.aggregate(self.clients, device=device)

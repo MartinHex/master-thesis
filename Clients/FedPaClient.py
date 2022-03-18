@@ -19,6 +19,11 @@ class FedPaClient(Base_Client):
         self.model_size = sum(self.layer_size)
         self.layer_shapes = [w[k].size() for k in w]
 
+        self.learning_rate = learning_rate
+        self.momentum = momentum
+        self.decay = decay
+        self.dampening = dampening
+
         # FedPa parameters
         self.beta = shrinkage
         self.shrinkage = shrinkage
@@ -78,3 +83,7 @@ class FedPaClient(Base_Client):
         model_w = {k:torch.reshape(a_tens[i],self.layer_shapes[i])
                     for i,k in enumerate(self.layers )}
         return model_w
+
+    def reset_optimizer(self):
+        self.optimizer = optim.SGD(self.model.parameters(), lr = self.learning_rate,
+            momentum = self.momentum, weight_decay = self.decay, dampening = self.dampening)
