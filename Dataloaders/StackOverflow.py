@@ -18,7 +18,7 @@ class StackOverflow(FederatedDataLoader):
     preprocessed data is stored in a data folder.
     This data in json format userComments_{n_entries}_{n_words}.json .
     """
-    def __init__(self, number_of_clients, n_words=20,n_entries=128,seed=0,vocab_size=10000,test_size=0.25, seed = 1234):
+    def __init__(self, number_of_clients, n_words=20,n_entries=128,seed=0,vocab_size=10000,test_size=0.25):
         """Constructor
 
         Args:
@@ -51,11 +51,9 @@ class StackOverflow(FederatedDataLoader):
             for usr_cmnt in usr_cmnts[usr]:
                 for word in usr_cmnt['tokens']:
                     counts[word]+=1
+
         counts_srtd = {k: v for k, v in sorted(counts.items(), key=lambda item: item[1])}
         self.vocab = set(list(counts_srtd)[-vocab_size:])
-
-        # Sample train and testing data
-        random_sample = random.sample(list(usr_cmnts),number_of_clients)
 
         # Add placeholder indicies to data.
         self.vocab.add('OoV')
@@ -63,53 +61,67 @@ class StackOverflow(FederatedDataLoader):
         self.vocab.add('EoS')
         self.vocab.add('Pad')
 
-        # Preproccess data for the current vocab
-        for usr in random_sample:
-            for usr_cmnt in usr_cmnts[usr]:
-                usr_cmnt['tokens'] = self.preprocess(usr_cmnt['tokens'],min_words=n_words)
+        # Set up maps
+        self.index_to_word = {index: word for index, word in enumerate(self.vocab)}
+        self.word_to_index = {word: index for index, word in enumerate(self.vocab)}
 
-        # Construct training and test data
+        # Sample clients
+        random_sample = random.sample(list(usr_cmnts),number_of_clients)
+
+        # Set up raw data
         sequences = [[cmnt['tokens'] for cmnt in usr_cmnts[usr]]
                             for usr in random_sample]
-        # Split into 2 different sets
         test_size = int(n_entries*test_size)
-        self.split_trainset = [seq[test_size:] for seq in sequences ]
-        self.testset = [seq[:test_size] for seq in sequences]
+        self.raw_trainset = [seq[test_size:] for seq in sequences ]
+        self.raw_testset = [seq[:test_size] for seq in sequences]
+
+        # Preproccess data
+        self.trainset = self.preprocess(self.raw_trainset)
+        self.testset = self.preprocess(self.raw_testset)
+
         # Flatten testset
         self.testset = [seq for usr_seq in self.testset for seq in usr_seq]
+        self.raw_testset = [seq for usr_seq in self.raw_testset for seq in usr_seq][0]
 
 
     def get_training_dataloaders(self, batch_size, shuffle = True):
         dataloaders = []
-        for client in self.split_trainset:
-            dataset = WordSequenceDataset(sequences=client,vocab=self.vocab,
-                                            sequence_length=self.sequence_length)
+        for client in self.trainset:
+            dataset = WordSequenceDataset(sequences=client,n_words=20,Oov_idx=self.word_to_index['OoV'])
             dataloader = DataLoader(dataset,batch_size = batch_size, shuffle = shuffle)
             dataloaders.append(dataloader)
         return dataloaders
 
     def get_test_dataloader(self, batch_size):
-        dataset = WordSequenceDataset(sequences=self.testset,vocab=self.vocab,
-                                        sequence_length=self.sequence_length)
+        dataset = WordSequenceDataset(sequences=self.testset,n_words=20,Oov_idx=self.word_to_index['OoV'])
         return DataLoader(dataset,batch_size = batch_size, shuffle = False)
 
     def get_training_raw_data(self):
-        return self.split_trainset
+        return self.raw_trainset
 
     def get_test_raw_data(self):
-        return self.testset
+        return self.raw_testset
 
     def get_vocab(self):
         return self.vocab
 
-    def preprocess(self,sentence,min_words=20):
-        for i,w in enumerate(sentence):
+    def preprocess(self,users,n_words=20):
+        res = []
+        for usr in users:
+            usr_res = []
+            for cmnt in usr:
+                preprocessed_cmnt = self.preprocess_cmt(cmnt,n_words=n_words)
+                usr_res.append(preprocessed_cmnt)
+            res +=[usr_res]
+        return res
+
+    def preprocess_cmt(self,cmnt,n_words):
+        res_seq = cmnt.copy()
+        for i,w in enumerate(cmnt):
             if(w not in self.vocab):
-                sentence[i] = 'OoV'
-        res_seq = ['BoS']+sentence+['EoS']
-        remaining_space = min_words-len(res_seq)+1
-        if(remaining_space>0):
-            res_seq= ['Pad']*remaining_space+res_seq
+                res_seq[i] = 'OoV'
+        res_seq = (n_words-2)*['Pad']+['BoS']+res_seq+['EoS']
+        res_seq = [self.word_to_index[w]for w in res_seq]
         return res_seq
 
 
@@ -163,24 +175,22 @@ class WordSequenceDataset(Dataset):
     Args:
         data: list of data for the dataset.
     """
-    def __init__(self,sequences,vocab,sequence_length=20):
+    def __init__(self,sequences,n_words=20,Oov_idx=None):
+        self.n_words = n_words
         self.sequences = sequences
-        self.sequence_length = sequence_length
-        self.vocab = vocab
         # Set up indexing for dynamically loading different subsets of sentences.
-        samples_per_sentence = [len(s)-sequence_length for s in sequences]
-        self.indexing = [[i,j] for i in range(len(sequences)) for j in range(samples_per_sentence[i])]
-
-        self.index_to_word = {index: word for index, word in enumerate(self.vocab)}
-        self.word_to_index = {word: index for index, word in enumerate(self.vocab)}
+        self.indexing = []
+        for i,seq in enumerate(sequences):
+            for j,wrd in enumerate(seq[(n_words-1):-1]):
+                if wrd!=Oov_idx:
+                    self.indexing += [[i,(n_words+j)]]
 
     def __len__(self):
         return len(self.indexing)
 
     def __getitem__(self, index):
-        seq,first_word = self.indexing[index]
-        sequence = self.sequences[seq][first_word:(first_word+self.sequence_length+1)]
-        sequence = [self.word_to_index[w] for w in sequence]
+        seq,last_word = self.indexing[index]
+        sequence = self.sequences[seq][(last_word-self.n_words):last_word]
         return (
             tensor(sequence[:-1]),
             tensor(sequence[1:])
