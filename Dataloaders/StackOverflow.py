@@ -193,5 +193,5 @@ class WordSequenceDataset(Dataset):
         sequence = self.sequences[seq][(last_word-self.n_words):last_word]
         return (
             tensor(sequence[:-1]),
-            tensor(sequence[1:])
+            tensor(sequence[-1])
         )
