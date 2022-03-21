@@ -15,20 +15,17 @@ class EMNIST(FederatedDataLoader):
         - That the Federated EMNIST-62 (FEMNIST) dataset is present in ../data/femnist.
         - The data is split by using the method presented by Caldas et al. (https://github.com/TalwalkarLab/leaf)
     """
-    def __init__(self, number_of_clients, test_size = 0.3, data_path = None, test_path = None, seed = 1234, client_threshold = 150):
-        if data_path:
-            self.data_path = data_path
+    def __init__(self, train_path = None, test_path = None):
+        if train_path:
+            self.train_path = train_path
+            self.test_path = test_path
         else:
-            self.data_path = os.path.join('data', 'femnist', 'all_data')
+            self.train_path = os.path.join('data', 'femnist', 'train')
+            self.test_path = os.path.join('data', 'femnist', 'test')
 
-        np.random.seed(seed = seed)
-        self.test_size = test_size
-        self.client_size_threshold = client_threshold
-
-        self.testset = []
-        self.trainset = []
-
-        self._test_train_split()
+        self.testset = self._get_clients(self.test_path)
+        self.trainset = self._get_clients(self.train_path)
+        self.testset = [item for sublist in self.testset for item in sublist]
 
     def get_training_dataloaders(self, batch_size, shuffle = True):
         dataloaders = []
@@ -45,27 +42,13 @@ class EMNIST(FederatedDataLoader):
     def get_test_raw_data(self):
         return self.testset
 
-    def _test_train_split(self):
-        all_clients = self._get_all_clients()
-        for client in all_clients:
-            if (len(client) >= self.client_size_threshold):
-                test_size = int(self.test_size * len(client))
-                train_index = np.random.choice(range(len(client)), size = (len(client) - test_size), replace = False)
-                test_index = np.random.choice(list(set(range(len(client))) - set(train_index)), size = test_size, replace = False)
-                assert len(set(train_index) | set(test_index)) == (len(set(train_index)) + len(set(test_index))), "Clients appear in both training and test set"
-
-                train_data = [client[i] for i in train_index]
-                test_data = [client[i] for i in test_index]
-                if len(train_data) > 0: self.trainset.append(train_data)
-                if len(test_data) > 0:self.testset.extend(test_data)
-
-    def _get_all_clients(self):
+    def _get_clients(self, path):
         all_clients = []
-        files = os.listdir(self.data_path)
+        files = os.listdir(path)
         files = [f for f in files if f.endswith('.json')]
-        print('Collecting all available authors...')
+        print('Collecting all available authors on path: {}'.format(path))
         for f in tqdm(files):
-            file_path = os.path.join(self.data_path,f)
+            file_path = os.path.join(path,f)
             with open(file_path, 'r') as data:
                 data = json.load(data)
             file_clients = data['users']
