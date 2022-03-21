@@ -11,7 +11,8 @@ import threading
 import numpy as np
 
 class Algorithm():
-    def __init__(self,server,client, dataloaders, callbacks=None, save_callbacks=False,clients_per_round=None, clients_sample_alpha = 'inf'):
+    def __init__(self,server,client, dataloaders, callbacks=None, save_callbacks=False,clients_per_round=None, clients_sample_alpha = 'inf', seed = 1234):
+        np.random.seed(seed)
         self.callbacks = callbacks if callbacks!=None else []
         self.dataloaders = dataloaders
         self.clients_per_round = len(dataloaders) if clients_per_round==None else clients_per_round
@@ -27,7 +28,7 @@ class Algorithm():
         if clients_sample_alpha == 'inf':
             self.client_probabilities = [1/len(dataloaders)] * (len(dataloaders))
         else:
-            assert (clients_sample_alpha >= 0 and clients_sample_alpha <= 1), 'Client sample alpha must be in (0,1).'
+            assert clients_sample_alpha > 0, 'Client sample alpha must be greater than 0.'
             self.client_probabilities = np.random.dirichlet([clients_sample_alpha] * len(dataloaders))
 
     def run(self,iterations, epochs = 1, device = None,option = 'mle',n_workers=3):
@@ -45,6 +46,7 @@ class Algorithm():
                 # Initialize Client to run
                 self.clients[i].dataloader = dataloader
                 self._set_model_weight(i, option)
+                self.clients[i].reset_optimizer() # Reset optimizer so client momentum can be used, not momentum does not carry over between rounds
                 loss = self.clients[i].train(epochs = epochs, device = device)
 
             dataloader_sizes = [len(dataloader.dataset) for dataloader in dataloader_sample]
