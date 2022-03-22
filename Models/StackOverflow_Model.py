@@ -2,11 +2,8 @@ import torch
 from torch import nn
 from Models.nn_Model import nn_Model
 
-
-
-
 class StackOverflow_Model(nn_Model):
-    def __init__(self, n_vocab=10004,sequence_length=20):
+    def __init__(self, n_vocab=10004,sequence_length=19):
         super().__init__()
         self.lstm_size = 670
         self.embedding_dim = 96
@@ -20,19 +17,20 @@ class StackOverflow_Model(nn_Model):
         self.lstm = nn.LSTM(
             input_size=self.embedding_dim,
             hidden_size=self.lstm_size,
-            num_layers=self.num_layers,
-            dropout=0.2,
+            num_layers=self.num_layers
         )
         self.fc = nn.Linear(self.lstm_size, n_vocab)
+        self.softmax = nn.Softmax(dim = 1)
 
     def forward(self, x, prev_state=None):
         if(prev_state==None):
             prev_state=self.init_state()
         embed = self.embedding(x)
         output, state = self.lstm(embed, prev_state)
+        output = output[:, -1, :]
         logits = self.fc(output)
-        p = nn.Softmax(logits).dim
-        return p, state
+        p = nn
+        return logits, state
 
     def predict(self, input, device = None):
         self.eval()
@@ -42,11 +40,11 @@ class StackOverflow_Model(nn_Model):
             state_h = state_h.to(device)
             state_c = state_c.to(device)
             input = input.to(device)
-        output = self(input, (state_h, state_c))
+        pred,(state_h, state_c) = self(input, (state_h, state_c))
         if (device!= None):
             self.to('cpu')
             torch.cuda.empty_cache()
-        return output
+        return pred
 
     def init_state(self):
         return (torch.zeros(self.num_layers, self.sequence_length, self.lstm_size),
@@ -66,7 +64,8 @@ class StackOverflow_Model(nn_Model):
                 y = y.to(device)
             # forward pass: compute predicted outputs by passing inputs to the model
             y_pred, (state_h, state_c) = self(x, (state_h, state_c))
-            loss = loss_func(y_pred.transpose(1, 2), y)
+            # Select last word as prediction
+            loss = loss_func(y_pred, y)
             # update running validation loss
             loss_per_batch.append(loss.item()/x.size(0))
         if (device!= None):
@@ -92,7 +91,7 @@ class StackOverflow_Model(nn_Model):
                     y = y.to(device)
                 # gives batch data, normalize x when iterate train_loader
                 y_pred, (state_h, state_c) = self(x, (state_h, state_c))
-                loss = loss_func(y_pred.transpose(1, 2), y)
+                loss = loss_func(y_pred, y)
                 # Detatch reference for maintaining graph-structure
                 state_h = state_h.detach()
                 state_c = state_c.detach()
@@ -120,7 +119,7 @@ class StackOverflow_Model(nn_Model):
                     y = y.to(device)
                 # gives batch data, normalize x when iterate train_loader
                 y_pred, (state_h, state_c) = self(x, (state_h, state_c))
-                loss = loss_func(y_pred.transpose(1, 2), y)
+                loss = loss_func(y_pred, y)
                 # Detatch reference for maintaining graph-structure
                 state_h = state_h.detach()
                 state_c = state_c.detach()

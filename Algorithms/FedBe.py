@@ -24,7 +24,7 @@ class FedBe(Algorithm):
                 tau=0.1,
                 b1=.9,
                 b2=0.99,
-                server_momentum=1,
+                server_momentum=0,
                 clients_sample_alpha = 'inf',
                 ):
 
