@@ -10,8 +10,8 @@ import random
 class FedBeServer(ABCServer):
 
     def __init__(self,model,loc_data,M=10,swa_lr1=0.001,swa_lr2=0.0004,
-                    swa_freq=5,swa_epochs=1,verbose=True):
-        super().__init__(model)
+                    swa_freq=5,swa_epochs=1,verbose=True,lr=1,tau=0.1,b1=.9,b2=0.99,momentum=1,optimizer='none'):
+        super().__init__(model,optimizer = optimizer,lr=lr,tau=tau,b1=b1,b2=b2,momentum=momentum)
         w = model.get_weights()
         self.loc_data = loc_data
         # Set initial distributions
@@ -96,7 +96,7 @@ class FedBeServer(ABCServer):
                  # To set average loss, we predict to set graph gradients
                  # Multiply the result by zero and add the average loss to get
                  # the propper backpropagation.
-                 pred = self.model.forward(x)[0]
+                 pred = self.model.predict(x)[0]
                  tmp_loss=(torch.mean(pred)*0-p[j])
                  tmp_loss.backward()
                  opt.step()

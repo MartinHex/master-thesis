@@ -18,7 +18,7 @@ class StackOverflow(FederatedDataLoader):
     preprocessed data is stored in a data folder.
     This data in json format userComments_{n_entries}_{n_words}.json .
     """
-    def __init__(self, number_of_clients, n_words=20,n_entries=128,seed=0,vocab_size=10000,test_size=0.25):
+    def __init__(self, number_of_clients, n_words=20,n_entries=128,seed=0,vocab_size=10000,test_size=0.01):
         """Constructor
 
         Args:
