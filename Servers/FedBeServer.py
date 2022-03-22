@@ -31,7 +31,7 @@ class FedBeServer(ABCServer):
         self.verbose = verbose
 
 
-    def combine(self, clients,device=None):
+    def combine(self, clients,device=None, client_scaling = None):
         # Dynamically calculate mean and variance of server weights.
         if self.verbose: print('FedBe: Reading in clients.')
         device = device if device!=None else 'cpu'

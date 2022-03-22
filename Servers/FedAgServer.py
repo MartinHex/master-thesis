@@ -15,7 +15,7 @@ class FedAgServer(ProbabilisticServer):
         self.model_shapes = [w[k].size() for k in w]
         self.model_size = sum(self.tens_lengths)
 
-    def combine(self, clients,device=None):
+    def combine(self, clients,device=None, client_scaling = None):
         # Dynamically calculate mean and variance of server weights.
         device = device if device!=None else 'cpu'
         mu_n = torch.zeros(self.model_size).to(device)
