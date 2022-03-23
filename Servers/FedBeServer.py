@@ -62,7 +62,7 @@ class FedBeServer(ABCServer):
         for i in range(self.M):
             w_s = self.distribution.sample()
             w_r = torch.split(w_s,self.tens_lengths)
-            w_r = {k:torch.reshape(w_r[i],self.model_shapes[i]).to(device) for i,k in enumerate(w)}
+            w_r = {k:torch.reshape(w_r[i],self.model_shapes[i]) for i,k in enumerate(mu_r)}
             S.append(w_r)
 
         ################ Evaluate on local data #######################
@@ -73,11 +73,12 @@ class FedBeServer(ABCServer):
         for w in S:
             self.model.set_weights(w)
             nll = self.model.evaluate(self.loc_data,loss_func=loss,take_mean=False,device=device)
-            res = torch.exp(torch.Tensor(nll)).to(device)
+            res = torch.exp(torch.Tensor(nll))
+            res = torch.nan_to_num(res, nan=0.0).to(device)
             if(p == None):
                 p = torch.zeros(len(res)).to(device)
             p = p.add(res)
-        p = p.div(len(S)).to(device)
+        p = p.div(len(S))
 
         ############## SWA ############################
         if self.verbose: print('FedBE: Running SWA')
@@ -100,7 +101,6 @@ class FedBeServer(ABCServer):
                  tmp_loss=(torch.mean(pred)*0-p[j])
                  tmp_loss.backward()
                  opt.step()
-             if self.verbose: print('FedBE: Epoch %i: loss: %.4f'%(i,(-tmp_loss.item())))
 
         if self.verbose: print('FedBE: SWA Destilation done, updating model weights.')
         self.model.to('cpu')

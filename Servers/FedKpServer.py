@@ -177,13 +177,13 @@ class FedKpServer(ProbabilisticServer):
         new_weights = w_0.sub(current_delta.div(self.shrinkage)).to('cpu')
         return new_weights
 
-    def _mean_shift(self,client_weights,tol=0.000001,max_iter = 10000,device=None):
+    def _mean_shift(self,client_weights,tol=0.000001,max_iter = 100,device=None):
         H = self.bandwidth_method(client_weights,device=device)
         w = torch.mean(client_weights,0).to(device)
         #print(w)
         dif = tol+ 1
         i = 0
-        while i<10:
+        while i<max_iter:
             denominator= torch.zeros(self.model_size).to(device)
             numerator = torch.zeros(self.model_size).to(device)
             for _,client_w in enumerate(client_weights):
@@ -207,7 +207,7 @@ class FedKpServer(ProbabilisticServer):
         sig = torch.std(client_weights,0).to(device)
         d = len(client_weights[0])
 
-        return n**(-1/(d+4))*sig+0.000001
+        return n**(-1/(d+4))*(sig+0.000001)
 
 
     def _silverman(self,client_weights,device=None):
@@ -215,4 +215,4 @@ class FedKpServer(ProbabilisticServer):
         sig = torch.std(client_weights,0).to(device)
         d = len(client_weights[0])
 
-        return (4/(d+2))**(1/(d+4))*n**(-1/(d+4))*sig+0.000001
+        return (4/(d+2))**(1/(d+4))*n**(-1/(d+4))*(sig+0.000001)

@@ -92,12 +92,13 @@ class Algorithm():
 
     def sample_dataloaders(self):
         if self.clients_per_round!=len(self.dataloaders):
-            dataloaders = np.random.choice(
-                self.dataloaders,
+            rand_idx = np.random.choice(
+                np.arange(len(self.dataloaders)),
                 size = self.clients_per_round,
                 replace = False,
                 p = self.client_probabilities,
                 )
+            dataloaders = [self.dataloaders[idx] for idx in rand_idx]
             return dataloaders
         else:
             return self.dataloaders

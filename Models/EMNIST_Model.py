@@ -57,6 +57,5 @@ class EMNIST_Model(nn_Model):
         x = self.dense1(x)
         x = self.relu(x)
         x = self.dropout2(x)
-        x = self.dense2(x)
-        output = self.softmax(x)
+        output = self.dense2(x)
         return output, x    # return x for visualization

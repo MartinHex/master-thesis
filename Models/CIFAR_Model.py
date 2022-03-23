@@ -6,14 +6,12 @@ class CIFAR_Model(nn_Model):
     def __init__(self):
         super().__init__()
         number_of_classes = 100
-        self.model = resnet.resnet18(pretrained = False, norm_layer=MyGroupNorm)
+        self.model = resnet.resnet18(pretrained = False) #, norm_layer=MyGroupNorm)
         self.model.fc = nn.Linear(512, number_of_classes)
-        self.softmax = nn.Softmax(dim = 1)
 
 
     def forward(self, x):
-        x = self.model(x)
-        output = self.softmax(x)
+        output = self.model(x)
         return output, x    # return x for visualization
 
 class MyGroupNorm(nn.Module):

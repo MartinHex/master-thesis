@@ -1,6 +1,6 @@
 import torch
 import torchvision
-import torchvision.transforms as transforms
+import torchvision.transforms as tt
 import numpy as np
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
@@ -61,45 +61,28 @@ class DirichletCifar100(FederatedDataLoader):
         self.number_of_clients = number_of_clients
         self.alpha = alpha
         self.beta = beta
+        # Mean and std for standaridization which was precalculated.
+        mean = torch.Tensor([0.5071, 0.4865, 0.4409])
+        std = torch.Tensor([0.1642, 0.1496, 0.1728])
 
-        self.trainset = torchvision.datasets.CIFAR100(root= './data', train = True, download = download, transform = transforms.ToTensor())
+        self.trainset = torchvision.datasets.CIFAR100(root= './data', train = True,
+                            download = download,transform=tt.Compose([
+                                    tt.ToTensor(),
+                                    tt.RandomCrop(24),
+                                    tt.Normalize(mean, std)
+                                    ]))
 
         assert len(self.trainset) % self.number_of_clients == 0, "Number of clients must be evenly devicible with the length of the dataset, length of the dataset is {}".format(len(self.trainset))
 
-        self.testset = [(x, self.map_fine_to_coarse_label[y], y) for x, y in torchvision.datasets.CIFAR100(root = './data', train = False, download = download, transform = transforms.ToTensor())]
+        self.testset = [(x, self.map_fine_to_coarse_label[y], y) for x, y in torchvision.datasets.CIFAR100(root = './data',
+                        train = False, download = download,transform=tt.Compose([
+                                tt.ToTensor(),
+                                tt.CenterCrop(24),
+                                tt.Normalize(mean, std)
+                            ]))]
+
 
         self.split_trainset = self._create_trainset()
-
-        self._preprocess(self.testset, type = 'test')
-        for client in self.split_trainset:
-            self._preprocess(client)
-
-    def _preprocess(self, data, type = 'train'):
-            total_mean = torch.Tensor([0,0,0])
-            total_mean_squared = torch.Tensor([0,0,0])
-            for index, (image, _, _) in enumerate(data):
-                mean = torch.sum(image, (1,2)).div(32*32)
-                total_mean = total_mean.add(mean)
-                total_mean_squared =  total_mean_squared.add(torch.square(mean))
-            total_mean = total_mean.div(len(data))
-            total_variance = total_mean_squared.div(len(data)).sub(torch.square(total_mean))
-            total_std = torch.sqrt(total_variance)
-
-            if type == 'train':
-                transform = transforms.Compose(
-                    [
-                        transforms.RandomCrop(24), #Size 24 given paper by paper.
-                        transforms.Normalize(total_mean, total_std),
-                    ])
-            elif type == 'test':
-                transform = transforms.Compose(
-                    [
-                        transforms.CenterCrop(24), #Size 24 given paper by paper.
-                        transforms.Normalize(total_mean, total_std),
-                    ])
-
-            for index, (image, c, f) in enumerate(data):
-                data[index] = (transform(image), c, f)
 
     def get_training_raw_data(self):
         """Get the training data in the same partition as in the dataloaders but in form of lists of Tensors
@@ -227,6 +210,7 @@ class DirichletCifar100(FederatedDataLoader):
         for l in theta:
             s += l
         map(lambda x: x/s, theta)
+
 
 class ImageDataset(Dataset):
     def __init__(self, data, label):

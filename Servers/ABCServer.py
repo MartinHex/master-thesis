@@ -34,8 +34,8 @@ class ABCServer(ABC):
         for client in clients:
             client.set_weights(self.get_weights())
 
-    def evaluate(self, dataloader, loss_func=nn.CrossEntropyLoss(), device = None):
-        return self.model.evaluate(dataloader, loss_func, device = device)
+    def evaluate(self, dataloader, loss_func=nn.CrossEntropyLoss(), device = None, take_mean = True):
+        return self.model.evaluate(dataloader, loss_func, device = device, take_mean = take_mean)
 
     def fedOpt(self,w_new,w_old):
         return self.optimizer.opt(w_new,w_old)

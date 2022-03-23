@@ -31,18 +31,18 @@ class Callbacks():
         return {'kurtosis': [kurtosis.item() for kurtosis in kurtosises]}
 
     def server_loss(self, algorithm):
-        test_loss = algorithm.server.evaluate(self.dataloader, device = self.device)
+        test_loss = algorithm.server.evaluate(self.dataloader, device = self.device, take_mean = False)
         if self.verbose:
-            print("Server val loss: {:.5f}".format(test_loss))
+            print("Server val loss: {:.5f}".format(sum(test_loss)))
         return {'server': test_loss}
 
     def client_loss(self, algorithm):
         client_losses = dict()
         for i, client in enumerate(algorithm.clients):
-            client_loss = client.evaluate(self.dataloader, device = self.device)
+            client_loss = client.evaluate(self.dataloader, device = self.device, take_mean = False)
             client_losses['Client_{}'.format(i)] = client_loss
             if self.verbose:
-                print("Client {}: val loss: {:.5f}".format(i, client_loss))
+                print("Client {}: val loss: {:.5f}".format(i, sum(client_loss)))
         return client_losses
 
     def server_accuracy(self, algorithm):
@@ -118,8 +118,8 @@ def _accuracy(model, dataloader, device):
     for data, target in dataloader:
         output = model.predict(data, device = device)
         output_labels = torch.argmax(output[0], axis = -1).to('cpu')
-        acc += torch.sum(output_labels == target)/data.size(0)
-    return acc.item() / len(dataloader)
+        acc += torch.sum(output_labels == target)
+    return acc.item() / len(dataloader.dataset)
 
 def _recall(model, dataloader, device):
     target_true = torch.Tensor()

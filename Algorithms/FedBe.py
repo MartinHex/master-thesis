@@ -28,19 +28,25 @@ class FedBe(Algorithm):
                 clients_sample_alpha = 'inf',
                 ):
 
-        client_dataloaders = dataloader.get_training_dataloaders(batch_size)
+        client_dataloaders = dataloader.get_training_dataloaders(batch_size=batch_size)
         # Set up local dataloader
         loc_data = []
         client_dataloaders_adj = []
-        for loader in client_dataloaders:
+        for client_dataloader in client_dataloaders:
             adj_dataloader = []
-            loader_size = len(loader)
-            for i,(x,y) in enumerate(loader):
-                if(i<p_validation*loader_size):
-                    loc_data.append((x,y))
-                else:
-                    adj_dataloader.append((x,y))
+            test_size = len(client_dataloader.dataset)*p_validation
+            count = 0
+            for (x,y) in client_dataloader:
+                for (xi,yi) in zip(x,y):
+                    if(count<test_size):
+                        loc_data.append((xi,yi))
+                        count+=1
+                    else:
+                        adj_dataloader.append((xi,yi))
+            adj_dataloader = DataLoader(adj_dataloader,batch_size=batch_size)
             client_dataloaders_adj.append(adj_dataloader)
+
+        loc_data = DataLoader(loc_data,batch_size=batch_size,shuffle=True)
 
         client = SGDClient(Model(), None,
                             learning_rate = client_lr,
