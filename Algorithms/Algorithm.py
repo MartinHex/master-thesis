@@ -43,14 +43,13 @@ class Algorithm():
             if file_name==None:
                 file_name = 'experiment_{}.json'.format(datetime.now().strftime("%d_%m_%Y_%H_%M"))
             file_path = os.path.join(log_dir, file_name)
-            callback_data = defaultdict(lambda: [])
-        else:
-            callback_data = None
+
+        self.callback_data = defaultdict(lambda: [])
 
         # Run algorithm
         for round in range(iterations):
             print('---------------- Round {} ----------------'.format(round + 1))
-            if log_callbacks: callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+            self.callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
             if option == 'single_sample': self.server.set_weights(self.server.sample_model())
             dataloader_sample = self.sample_dataloaders()
 
@@ -65,8 +64,8 @@ class Algorithm():
             self.server.aggregate(self.clients, device=device, client_scaling = dataloader_sizes)
 
             # Run callbacks and log results
-            if (callbacks != None): self._run_callbacks(callbacks,log_callbacks,callback_data)
-            if log_callbacks: self._save_callbacks(callback_data,file_path)
+            if (callbacks != None): self._run_callbacks(callbacks)
+            if log_callbacks: self._save_callbacks(file_path)
 
 
     def _train_client(self,i,dataloader,option,epochs,device,losses):
@@ -76,16 +75,15 @@ class Algorithm():
         loss = self.clients[i].train(epochs = epochs, device = device)
         losses.append(loss)
 
-    def _run_callbacks(self,callbacks,log_callbacks=False,callback_data=None):
+    def _run_callbacks(self,callbacks):
         for callback in callbacks:
             new_values = callback(self)
-            if log_callbacks:
-                for key, value in new_values.items():
-                    callback_data[key].append(value)
+            for key, value in new_values.items():
+                self.callback_data[key].append(value)
 
-    def _save_callbacks(self,callback_data,file_path):
+    def _save_callbacks(self,file_path):
         with open(file_path, "w") as outfile:
-            json.dump(callback_data, outfile)
+            json.dump(self.callback_data, outfile)
 
     def _set_model_weight(self, i, option):
         if option == 'mle' or not isinstance(self.server,ProbabilisticServer):
@@ -94,6 +92,9 @@ class Algorithm():
             self.clients[i].set_weights(self.server.get_weights())
         elif option =='multi_sample':
             self.clients[i].set_weights(self.server.sample_model())
+
+    def get_callback_data(self):
+        return self.callback_data
 
     def sample_dataloaders(self):
         if self.clients_per_round!=len(self.dataloaders):
