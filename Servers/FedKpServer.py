@@ -9,7 +9,7 @@ import warnings
 class FedKpServer(ProbabilisticServer):
     def __init__(self,model,shrinkage=1,store_distributions = False,cov_adj = False,
                 bandwidth = 'silverman',lr=1,tau=0.1,b1=.9,b2=0.99,momentum=1,
-                optimizer='none'):
+                optimizer='none',max_iter=100):
 
         super().__init__(model,optimizer = optimizer,lr=lr,tau=tau,b1=b1,b2=b2,momentum=momentum)
         super().__init__(model)
@@ -21,6 +21,7 @@ class FedKpServer(ProbabilisticServer):
         self.layer_shapes = [w[k].size() for k in w]
         self.cov_adj = cov_adj
         self.store_distributions = store_distributions
+        self.max_iter=100
         # Set bandwidth function
         if(bandwidth =='silverman'):
             self.bandwidth_method = self._silverman
@@ -177,13 +178,13 @@ class FedKpServer(ProbabilisticServer):
         new_weights = w_0.sub(current_delta.div(self.shrinkage)).to('cpu')
         return new_weights
 
-    def _mean_shift(self,client_weights,tol=0.000001,max_iter = 100,device=None):
+    def _mean_shift(self,client_weights,tol=0.000001,device=None):
         H = self.bandwidth_method(client_weights,device=device)
         w = torch.mean(client_weights,0).to(device)
         #print(w)
         dif = tol+ 1
         i = 0
-        while i<max_iter:
+        while i<self.max_iter:
             denominator= torch.zeros(self.model_size).to(device)
             numerator = torch.zeros(self.model_size).to(device)
             for _,client_w in enumerate(client_weights):
@@ -197,7 +198,7 @@ class FedKpServer(ProbabilisticServer):
             dif =torch.mean(torch.abs(w-m_x))
             w = torch.clone(m_x)
             i+=1
-        if(i>=max_iter):
+        if(i>=self.max_iter):
             warnings.warn("Maximal iteration reacher. You may want to look into increasing the amount of iterations.")
         #print(w)
         return w.to('cpu')
