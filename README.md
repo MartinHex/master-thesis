@@ -24,3 +24,11 @@ To run an example with FedAvg simply execute:
 python FedAvgExample.py
 ```
 Doing will train a simple network on the MNIST data split into 5 IID clients.
+
+## Using Jupyter Notebooks
+
+Some analysis is done in notebooks which produce a lot of metadata. If you intend to run, change and commit anything from notebooks please also install the `nbstripout` package by running
+
+```
+nbstripout --install
+```
