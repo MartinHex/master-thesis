@@ -11,7 +11,7 @@ class FedKp(Algorithm):
             momentum=0,
             decay=0,
             dampening=0,
-            cov_adj = True,
+            cov_adj = False,
             bandwidth = 'silverman',
             server_optimizer='none',
             server_lr=1,

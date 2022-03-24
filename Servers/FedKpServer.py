@@ -41,8 +41,8 @@ class FedKpServer(ProbabilisticServer):
 
     def combine(self, clients,device=None, client_scaling = None):
         # List and translate data into numpy matrix
-        client_weights = [c.get_weights() for c in clients]
-        client_weights = torch.stack([self._model_weight_to_array(c.get_weights())for c in clients])
+        client_weights = [self._model_weight_to_array(c.get_weights()) for c in clients]
+        client_weights = torch.stack(client_weights)
         print('Aggregating Models.')
         if(self.cov_adj):
             client_weights = self._cov_adj_client_weights(client_weights,device=device)
@@ -200,20 +200,19 @@ class FedKpServer(ProbabilisticServer):
             i+=1
         if(i>=self.max_iter):
             warnings.warn("Maximal iteration reacher. You may want to look into increasing the amount of iterations.")
-        #print(w)
         return w.to('cpu')
 
     def _scott(self,client_weights,device=None):
         n = len(client_weights)
-        sig = torch.std(client_weights,0).to(device)
+        sig = torch.nan_to_num(torch.std(client_weights,0).to(device))
         d = len(client_weights[0])
 
-        return n**(-1/(d+4))*(sig+0.000001)
+        return n**(-1/(d+4))*sig+0.000001
 
 
     def _silverman(self,client_weights,device=None):
         n = len(client_weights)
-        sig = torch.std(client_weights,0).to(device)
+        sig = torch.nan_to_num(torch.std(client_weights,0).to(device))
         d = len(client_weights[0])
 
-        return (4/(d+2))**(1/(d+4))*n**(-1/(d+4))*(sig+0.000001)
+        return (4/(d+2))**(1/(d+4))*n**(-1/(d+4))*sig+0.000001
