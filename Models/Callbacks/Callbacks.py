@@ -31,87 +31,89 @@ class Callbacks():
         return {'kurtosis': [kurtosis.item() for kurtosis in kurtosises]}
 
     def server_loss(self, algorithm):
-        test_loss = algorithm.server.evaluate(self.dataloader, device = self.device, take_mean = False)
+        test_loss = algorithm.server.evaluate(self.dataloader, device = self.device,take_mean=False)
+        test_loss = np.sum(test_loss)
         if self.verbose:
-            print("Server val loss: {:.5f}".format(sum(test_loss)))
-        return {'server': test_loss}
+            print("Server val loss: {:.5f}".format(test_loss))
+        return {'server_loss': test_loss}
 
     def client_loss(self, algorithm):
-        client_losses = dict()
+        client_losses = []
         for i, client in enumerate(algorithm.clients):
-            client_loss = client.evaluate(self.dataloader, device = self.device, take_mean = False)
-            client_losses['Client_{}'.format(i)] = client_loss
+            client_loss = client.evaluate(self.dataloader, device = self.device,take_mean=False)
+            client_loss = np.sum(client_loss)
+            client_losses.append(client_loss)
             if self.verbose:
-                print("Client {}: val loss: {:.5f}".format(i, sum(client_loss)))
-        return client_losses
+                print("Sampled Client {} loss: {:.3f}".format(i+1,client_loss))
+        return {'client_losses':client_losses}
 
     def server_accuracy(self, algorithm):
         algorithm.server.model.eval()
         accuracy = _accuracy(algorithm.server.model, self.dataloader, self.device)
         if self.verbose:
             print("Server val accuracy: {:.2f}".format(accuracy))
-        return {'server': accuracy}
+        return {'server_accuracy': accuracy}
 
     def client_accuracy(self, algorithm):
-        client_accuracies = dict()
+        client_accuracies = []
         for i, client in enumerate(algorithm.clients):
             client.model.eval()
             accuracy = _accuracy(client.model, self.dataloader, self.device)
-            client_accuracies['Client_{}'.format(i)] = accuracy
+            client_accuracies.append(accuracy)
             if self.verbose:
-                print("Client {} val accuracy: {:.2f}".format(i, accuracy))
-        return client_accuracies
+                print("Sampled Client {} accuracy: {:.3f}".format(i+1,accuracy))
+        return {'client_accuracies':client_accuracies}
 
     def client_recall(self, algorithm):
-        client_recalls = dict()
+        client_recalls = []
         for i, client in enumerate(algorithm.clients):
             client.model.eval()
             recall = _recall(client.model, self.dataloader, self.device)
-            client_recalls['Client_{}'.format(i)] = recall
+            client_recalls.append(recall)
             if self.verbose:
-                print("Client {} average val recall: {:.2f}".format(i, np.sum(recall) / (len(recall))))
-        return client_recalls
+                print("Sampled Client {} recall: {:.3f}".format(i+1,sum(recall)))
+        return {'client_recalls':client_recalls}
 
     def server_recall(self, algorithm):
         algorithm.server.model.eval()
         recall = _recall(algorithm.server.model, self.dataloader, self.device)
         if self.verbose:
             print("Server average val recall: {:.2f}".format(np.sum(recall) / (len(recall))))
-        return {'server': recall}
+        return {'server_recall': recall}
 
     def client_precision(self, algorithm):
-        client_precision = dict()
+        client_precisions = []
         for i, client in enumerate(algorithm.clients):
             client.model.eval()
             precision = _precision(client.model, self.dataloader, self.device)
-            client_precision['Client_{}'.format(i)] = precision
+            client_precisions.append(precision)
             if self.verbose:
-                print("Client {} average val precision: {:.2f}".format(i, np.sum(precision) / (len(precision))))
-        return client_precision
+                print("Sampled Client {} precision: {:.3f}".format(i+1,sum(precision)))
+        return {'client_precision':client_precisions}
 
     def server_precision(self, algorithm):
         algorithm.server.model.eval()
         precision = _precision(algorithm.server.model, self.dataloader, self.device)
         if self.verbose:
             print("Server average val precision: {:.2f}".format(np.sum(precision) / (len(precision))))
-        return {'server': precision}
+        return {'server_precision': precision}
 
     def client_f1(self, algorithm):
-        client_f1 = dict()
+        client_f1s =[]
         for i, client in enumerate(algorithm.clients):
             client.model.eval()
             f1 = _f1(client.model, self.dataloader, self.device)
-            client_f1['Client_{}'.format(i)] = f1
+            client_f1s.append(f1)
             if self.verbose:
-                print("Client {} average val f1 score: {:.2f}".format(i, np.sum(f1) / (len(f1))))
-        return client_f1
+                print("Sampled Client {} f1 score: {:.3f}".format(i+1,sum(f1)))
+        return {'client_f1':client_f1s}
 
     def server_f1(self, algorithm):
         algorithm.server.model.eval()
         f1 = _f1(algorithm.server.model, self.dataloader, self.device)
         if self.verbose:
             print("Server average val f1 score: {:.2f}".format(np.sum(f1) / (len(f1))))
-        return {'server': f1}
+        return {'server_f1': f1}
 
 def _accuracy(model, dataloader, device):
     acc = 0

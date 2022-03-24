@@ -5,11 +5,11 @@ from Algorithms.Algorithm import Algorithm
 from datetime import datetime
 import copy
 from tqdm import tqdm
+import os
+from collections import defaultdict
 
 class FedPa(Algorithm):
     def __init__(self,dataloader,Model,
-                callbacks=None,
-                save_callbacks = False,
                 batch_size=16,
                 clients_per_round=None,
                 client_lr = 0.01,
@@ -61,13 +61,26 @@ class FedPa(Algorithm):
         self.burnin=burnin
         self.tot_rounds = 0
 
-        super().__init__(server, self.SGD_client, client_dataloaders, callbacks, save_callbacks,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)
+        super().__init__(server, self.SGD_client, client_dataloaders,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)
 
-    def run(self,iterations, epochs = 1, device = None,option = 'mle',n_workers=3):
+    def run(self,iterations, epochs = 1, device = None,option = 'mle',n_workers=3,
+            callbacks=None,log_callbacks=False,log_dir=None,file_name=None):
+
         if(option not in ['mle','single_sample','multi_sample']):
             raise Exception("""Incorrect option provided must be either 'mle', 'single_sample' or 'multi_sample'""")
 
-        self.start_time = datetime.now()
+        # Set up path for saving callbacks
+        if log_callbacks:
+            if log_dir==None:
+                log_dir = os.path.join(os.getcwd(), 'data', 'logs')
+            if not os.path.exists(log_dir): os.mkdir(log_dir)
+            if file_name==None:
+                file_name = 'experiment_{}.json'.format(datetime.now().strftime("%d_%m_%Y_%H_%M"))
+            file_path = os.path.join(log_dir, file_name)
+            callback_data = defaultdict(lambda: [])
+        else:
+            callback_data = None
+
         #self.server.push_weights(self.clients)
         for round in range(iterations):
             if(self.tot_rounds==self.burnin):
@@ -76,7 +89,7 @@ class FedPa(Algorithm):
                 raise Exception('Burnin larger than number of iterations')
 
             print('---------------- Round {} ----------------'.format(round + 1))
-            self.callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+            if log_callbacks: callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
             if option == 'single_sample': self.server.set_weights(self.server.sample_model())
             dataloader_sample = self.sample_dataloaders()
@@ -88,10 +101,11 @@ class FedPa(Algorithm):
                 loss = self.clients[i].train(epochs = epochs, device = device)
 
             self.server.aggregate(self.clients, device=device)
-            if (self.callbacks != None): self._run_callbacks()
             self.tot_rounds +=1
 
-        if self.save_callbacks: self._save_callbacks()
+            # Run callbacks and log results
+            if (callbacks != None): self._run_callbacks(callbacks,log_callbacks,callback_data)
+            if log_callbacks: self._save_callbacks(callback_data,file_path)
         return None
 
     def reset_burnin(self):

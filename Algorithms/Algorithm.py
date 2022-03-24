@@ -11,19 +11,16 @@ import threading
 import numpy as np
 
 class Algorithm():
-    def __init__(self,server,client, dataloaders, callbacks=None, save_callbacks=False,clients_per_round=None, clients_sample_alpha = 'inf', seed = 1234):
+    def __init__(self,server,client, dataloaders, clients_per_round=None,
+                    clients_sample_alpha = 'inf', seed = 1234):
         np.random.seed(seed)
-        self.callbacks = callbacks if callbacks!=None else []
         self.dataloaders = dataloaders
         self.clients_per_round = len(dataloaders) if clients_per_round==None else clients_per_round
         if( len(dataloaders)<self.clients_per_round):
             raise Exception('More clients per round than clients provided.')
         self.server = server
-        self.save_callbacks = save_callbacks
-        self.callback_data = dict()
-        for name, callback in self.callbacks:
-            self.callback_data[name] = defaultdict(lambda: [])
-        self.callback_data['timestamps'] = []
+
+
         self.clients = [copy.deepcopy(client) for i in range(self.clients_per_round)]
         if clients_sample_alpha == 'inf':
             self.client_probabilities = [1/len(dataloaders)] * (len(dataloaders))
@@ -31,14 +28,29 @@ class Algorithm():
             assert clients_sample_alpha > 0, 'Client sample alpha must be greater than 0.'
             self.client_probabilities = np.random.dirichlet([clients_sample_alpha] * len(dataloaders))
 
-    def run(self,iterations, epochs = 1, device = None,option = 'mle',n_workers=3):
+
+
+    def run(self,iterations, epochs = 1, device = None,option = 'mle',
+            callbacks=None,log_callbacks=False,log_dir=None,file_name=None):
         if(option not in ['mle','single_sample','multi_sample']):
             raise Exception("""Incorrect option provided must be either 'mle', 'single_sample' or 'multi_sample'""")
-        self.start_time = datetime.now()
-        #self.server.push_weights(self.clients)
+
+        # Set up path for saving callbacks
+        if log_callbacks:
+            if log_dir==None:
+                log_dir = os.path.join(os.getcwd(), 'data', 'logs')
+            if not os.path.exists(log_dir): os.mkdir(log_dir)
+            if file_name==None:
+                file_name = 'experiment_{}.json'.format(datetime.now().strftime("%d_%m_%Y_%H_%M"))
+            file_path = os.path.join(log_dir, file_name)
+            callback_data = defaultdict(lambda: [])
+        else:
+            callback_data = None
+
+        # Run algorithm
         for round in range(iterations):
             print('---------------- Round {} ----------------'.format(round + 1))
-            self.callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+            if log_callbacks: callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
             if option == 'single_sample': self.server.set_weights(self.server.sample_model())
             dataloader_sample = self.sample_dataloaders()
 
@@ -51,10 +63,11 @@ class Algorithm():
 
             dataloader_sizes = [len(dataloader.dataset) for dataloader in dataloader_sample]
             self.server.aggregate(self.clients, device=device, client_scaling = dataloader_sizes)
-            if (self.callbacks != None): self._run_callbacks()
 
-        if self.save_callbacks: self._save_callbacks()
-        return None
+            # Run callbacks and log results
+            if (callbacks != None): self._run_callbacks(callbacks,log_callbacks,callback_data)
+            if log_callbacks: self._save_callbacks(callback_data,file_path)
+
 
     def _train_client(self,i,dataloader,option,epochs,device,losses):
         # Initialize Client to run
@@ -63,24 +76,16 @@ class Algorithm():
         loss = self.clients[i].train(epochs = epochs, device = device)
         losses.append(loss)
 
-    def get_callback_data(self,key):
-        return self.callback_data[key]
-
-    def _run_callbacks(self):
-        for name, callback in self.callbacks:
-            print('Running callback: {}'.format(name))
+    def _run_callbacks(self,callbacks,log_callbacks=False,callback_data=None):
+        for callback in callbacks:
             new_values = callback(self)
-            for key, value in new_values.items():
-                self.callback_data[name][key].append(value)
-        return None
+            if log_callbacks:
+                for key, value in new_values.items():
+                    callback_data[key].append(value)
 
-    def _save_callbacks(self):
-        file_name = 'experiment_{}.json'.format(self.start_time.strftime("%d_%m_%Y_%H_%M"))
-        log_dir = os.path.join(os.getcwd(), 'data', 'logs')
-        file_path = os.path.join(log_dir, file_name)
-        if not os.path.exists(log_dir): os.mkdir(log_dir)
+    def _save_callbacks(self,callback_data,file_path):
         with open(file_path, "w") as outfile:
-            json.dump(self.callback_data, outfile)
+            json.dump(callback_data, outfile)
 
     def _set_model_weight(self, i, option):
         if option == 'mle' or not isinstance(self.server,ProbabilisticServer):

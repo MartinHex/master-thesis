@@ -4,8 +4,6 @@ from Algorithms.Algorithm import Algorithm
 
 class FedAvg(Algorithm):
     def __init__(self,dataloader,Model,
-                callbacks=None,
-                save_callbacks = False,
                 batch_size=16,
                 clients_per_round=None,
                 client_lr=0.1,
@@ -37,4 +35,4 @@ class FedAvg(Algorithm):
                             b2=b2,
                             momentum=server_momentum)
 
-        super().__init__(server, client, client_dataloaders, callbacks, save_callbacks,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)
+        super().__init__(server, client, client_dataloaders, clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)

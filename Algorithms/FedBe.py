@@ -5,8 +5,6 @@ from torch.utils.data import DataLoader
 
 class FedBe(Algorithm):
     def __init__(self,dataloader,Model,
-                callbacks=None,
-                save_callbacks = False,
                 p_validation=0.1,
                 batch_size=16,
                 clients_per_round=None,
@@ -67,5 +65,4 @@ class FedBe(Algorithm):
                             b2=b2,
                             momentum=server_momentum)
 
-        super().__init__(server, client, client_dataloaders_adj, callbacks,
-                            save_callbacks,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)
+        super().__init__(server, client, client_dataloaders_adj,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)
