@@ -144,7 +144,7 @@ class FedKpServer(ProbabilisticServer):
         device = device if device !=None else 'cpu'
         w_0 = w_0.to(device)
         current_delta = w_0.sub(w_0).to(device)
-        current_average = w[1].sub(w[0]).div(2).to(device)
+        current_average = w[1].add(w[0]).div(2).to(device)
         u_t = w[1].sub(w[0]).to(device)
         v = [u_t]
         gamma_factors = []
