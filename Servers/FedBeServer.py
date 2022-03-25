@@ -73,7 +73,7 @@ class FedBeServer(ABCServer):
         for w in S:
             self.model.set_weights(w)
             nll = self.model.evaluate(self.loc_data,loss_func=loss,take_mean=False,device=device)
-            res = torch.exp(torch.Tensor(nll))
+            res = torch.exp(-torch.Tensor(nll))
             res = torch.nan_to_num(res, nan=0.0).to(device)
             if(p == None):
                 p = torch.zeros(len(res)).to(device)
@@ -100,6 +100,7 @@ class FedBeServer(ABCServer):
                  pred = self.model.predict(x)[0]
                  tmp_loss=(torch.mean(pred)*0-p[j])
                  tmp_loss.backward()
+                 nn.utils.clip_grad_norm_(self.parameters(), 10)
                  opt.step()
 
         if self.verbose: print('FedBE: SWA Destilation done, updating model weights.')
