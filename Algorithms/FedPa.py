@@ -77,9 +77,7 @@ class FedPa(Algorithm):
             if file_name==None:
                 file_name = 'experiment_{}.json'.format(datetime.now().strftime("%d_%m_%Y_%H_%M"))
             file_path = os.path.join(log_dir, file_name)
-            callback_data = defaultdict(lambda: [])
-        else:
-            callback_data = None
+        self.callback_data = defaultdict(lambda: [])
 
         #self.server.push_weights(self.clients)
         for round in range(iterations):
@@ -89,7 +87,7 @@ class FedPa(Algorithm):
                 raise Exception('Burnin larger than number of iterations')
 
             print('---------------- Round {} ----------------'.format(round + 1))
-            if log_callbacks: callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+            if log_callbacks: self.callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
             if option == 'single_sample': self.server.set_weights(self.server.sample_model())
             dataloader_sample = self.sample_dataloaders()
@@ -104,8 +102,8 @@ class FedPa(Algorithm):
             self.tot_rounds +=1
 
             # Run callbacks and log results
-            if (callbacks != None): self._run_callbacks(callbacks,log_callbacks,callback_data)
-            if log_callbacks: self._save_callbacks(callback_data,file_path)
+            if (callbacks != None): self._run_callbacks(callbacks)
+            if log_callbacks: self._save_callbacks(file_path)
         return None
 
     def reset_burnin(self):
