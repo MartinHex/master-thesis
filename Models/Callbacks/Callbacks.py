@@ -1,7 +1,7 @@
 import torch
 from sklearn.metrics import f1_score, recall_score, precision_score
 from collections import defaultdict
-from scipy.stats import kurtosis, skew
+from scipy.stats import kurtosis, skew, kstest
 import numpy as np
 
 class Callbacks():
@@ -9,6 +9,17 @@ class Callbacks():
         self.dataloader = dataloader
         self.verbose = verbose
         self.device = device
+
+    def ks_test(self, algorithm):
+        client_weights = [_model_weight_to_array(c.get_weights()) for c in algorithm.clients]
+        stacked_weights = torch.stack(client_weights, 0)
+        means = torch.mean(stacked_weights, 0)
+        std = torch.std(stacked_weights, 0)
+        moving_average = 0
+        for i in range(len(means)):
+            (s, p) = kstest(stacked_weights[:,i], 'norm', (means[i], std[i]))
+            moving_average = (moving_average * i + p)/(i+1)
+        return {'ks_test':moving_average}
 
     def skew(self,algorithm):
         client_weights = [cl.get_weights() for cl in algorithm.clients]
@@ -114,6 +125,10 @@ class Callbacks():
         if self.verbose:
             print("Server average val f1 score: {:.2f}".format(np.sum(f1) / (len(f1))))
         return {'server_f1': f1}
+
+def _model_weight_to_array(w):
+    flattened = torch.cat([w[k].flatten() for k in w]).detach()
+    return flattened
 
 def _accuracy(model, dataloader, device):
     acc = 0
