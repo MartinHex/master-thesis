@@ -20,7 +20,8 @@ class FedKp(Algorithm):
             b2=0.99,
             server_momentum=1,
             clients_sample_alpha = 'inf',
-            max_iter=100
+            max_iter=100,
+            seed=seed
             ):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
@@ -44,4 +45,4 @@ class FedKp(Algorithm):
                             momentum=server_momentum,
                             max_iter=max_iter)
 
-        super().__init__(server, client, client_dataloaders,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)
+        super().__init__(server, client, client_dataloaders,clients_per_round=clients_per_round,seed=seed, clients_sample_alpha = clients_sample_alpha)

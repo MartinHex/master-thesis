@@ -24,6 +24,7 @@ class FedBe(Algorithm):
                 b2=0.99,
                 server_momentum=0,
                 clients_sample_alpha = 'inf',
+                seed=1234,
                 ):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size=batch_size)
@@ -65,4 +66,4 @@ class FedBe(Algorithm):
                             b2=b2,
                             momentum=server_momentum)
 
-        super().__init__(server, client, client_dataloaders_adj,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)
+        super().__init__(server, client, client_dataloaders_adj,clients_per_round=clients_per_round,seed=seed, clients_sample_alpha = clients_sample_alpha)
