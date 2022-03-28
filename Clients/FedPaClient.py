@@ -30,37 +30,38 @@ class FedPaClient(Base_Client):
 
     def train(self,epochs=1, device = None):
         # Produce the desired gradient online and at any-time as described in appendix C by Al-Shedivat et al.
-        # (https://arxiv.org/pdf/2010.05273.pdf)
+        # (https://arxiv.org/pdf/2010.05273.pdf) mostly copied from:
+        # https://github.com/alshedivat/fedpa/blob/master/federated/inference/local.py#L170-L226
         initial_weights = self.model.get_weights()
         initial_weights = self._model_weight_to_array(initial_weights).to(device)
-        current_delta = torch.clone(initial_weights)
-        current_average = torch.zeros(self.model_size).to(device)
-        v = [torch.zeros(self.model_size).to(device)]
-        sum_factors = []
-
+        num_samples = epochs
+        samples = []
         for epoch in range(epochs):
-            t = epoch + 1
-            sample_weight = self._produce_iasg_sample(device)
-
-            u_t = sample_weight.sub(current_average)
-            sum = torch.zeros(self.model_size).to(device)
-            for k in range(t - 1):
-                gamma_k = (self.beta * k) / (k + 1) #Index different due to python start @ 0, Equation 17.
-                nominator = (gamma_k * v[k].matmul(u_t))
-                if k == t - 2:
-                    denominator = 1 + gamma_k * v[k].matmul(u_t)
-                    sum_factors.append(gamma_k/denominator)
-                factor = sum_factors[k]
-                sum = sum.add(v[k].mul(sum_factors[k]))
-            v.append(u_t.sub(sum)) #Equation 28
-            current_average = sample_weight.add(current_average, alpha = t).div(t+1)
-            gamma_t = (self.beta * (t - 1)) / t #Equation 17.
-            nominator = gamma_t * (t * u_t.matmul(current_delta) - u_t.matmul(v[t]))
-            denominator = 1 + gamma_t * u_t.matmul(v[t])
-            current_delta = current_delta.sub((1 + nominator / denominator).mul(v[t]).div(t + 1)) #Equation 23
-            current_average = sample_weight.add(current_average, alpha = t).div(t + 1)
-
-        new_weights =  initial_weights.sub(current_delta / self.shrinkage).cpu() #Gradient from Equation 2
+            samples.append(self._produce_iasg_sample(device))
+        rho = self.shrinkage
+        dp = defaultdict(list)
+        samples_ra = samples[0]
+        delta = initial_weights - samples_ra
+        for t, s in enumerate(samples[1:], 2):
+            u = v = s - samples_ra
+            # Compute v_{t-1,t} (solution of `sigma_{t-1} x = u_t`).
+            for k, (v_k, dot_uk_vk) in enumerate(zip(dp["v"], dp["dot_u_v"]), 2):
+                gamma_k = rho * (k - 1) / k
+                v = v - gamma_k * torch.dot(v_k, u) / (1 + gamma_k * dot_uk_vk) * v_k
+            # Compute `dot(u_t, v_t)` and `dot(u_t, delta_t)`.
+            dot_u_v = torch.dot(u, v)
+            dot_u_d = torch.dot(u, delta)
+            # Compute delta.
+            gamma = rho * (t - 1) / t
+            c = gamma * (t * dot_u_d - dot_u_v) / (1 + gamma * dot_u_v)
+            delta -= (1 + c) * v / t
+            # Update the DP state.
+            dp["v"].append(v)
+            dp["dot_u_v"].append(dot_u_v)
+            # Update running mean of the samples.
+            samples_ra = ((t - 1) * samples_ra + s) / t
+        final_delta = delta * (1 + (num_samples - 1) * rho)
+        new_weights = initial_weights.sub(final_delta)
         new_weights = self._array_to_model_weight(new_weights)
         return new_weights
 
