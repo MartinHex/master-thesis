@@ -13,23 +13,16 @@ device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
 
 # Create callback functions that are run at the end of every round
 cbs = Callbacks(test_data, device = device)
-callbacks = [
-    ('client_loss', cbs.client_loss),
-    ('server_loss', cbs.server_loss),
-    ('client_accuracy', cbs.client_accuracy),
-    ('server_accuracy', cbs.server_accuracy),
-]
+callbacks = [ cbs.client_loss,cbs.server_loss,cbs.client_accuracy,cbs.server_accuracy]
 
 #Create an instance of FedAvg and train a number of rounds
-alg = FedAvg(dataloader=dataloader, Model=Model, callbacks = callbacks, batch_size=16, save_callbacks = True)
-alg.run(2, device = device)
-
+alg = FedAvg(dataloader=dataloader, Model=Model, batch_size=16)
+alg.run(2, device = device,callbacks=callbacks,log_callbacks=False)
+client_losses
 #Access the callback history and plot the client loss
-client_losses = alg.get_callback_data('client_loss')
-for key, values in client_losses.items():
-    plt.plot(values, label = key)
-plt.title('Clinet Loss')
+server_loss = alg.get_callback_data()['server_loss']
+plt.plot(server_loss)
+plt.title('Server Loss')
 plt.xlabel('Round')
 plt.ylabel('Loss')
-plt.legend()
 plt.show()
