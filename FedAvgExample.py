@@ -1,6 +1,6 @@
 from Models.MNIST_Model import MNIST_Model as Model
 from Dataloaders.Mnist import Mnist as Dataloader
-from Algorithms.FedAvg import FedAvg
+from Algorithms.FedAvg import FedAvg as Alg
 from Models.Callbacks.Callbacks import Callbacks
 import matplotlib.pyplot as plt
 import torch
@@ -16,9 +16,9 @@ cbs = Callbacks(test_data, device = device)
 callbacks = [ cbs.client_loss,cbs.server_loss,cbs.client_accuracy,cbs.server_accuracy]
 
 #Create an instance of FedAvg and train a number of rounds
-alg = FedAvg(dataloader=dataloader, Model=Model, batch_size=16)
+alg = Alg(dataloader=dataloader, Model=Model, batch_size=16)
 alg.run(2, device = device,callbacks=callbacks,log_callbacks=False)
-client_losses
+
 #Access the callback history and plot the client loss
 server_loss = alg.get_callback_data()['server_loss']
 plt.plot(server_loss)

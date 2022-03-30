@@ -11,7 +11,7 @@ class FedKp(Algorithm):
             momentum=0,
             decay=0,
             dampening=0,
-            cov_adj = False,
+            cluster_mean = True,
             bandwidth = 'silverman',
             server_optimizer='none',
             server_lr=1,
@@ -35,7 +35,7 @@ class FedKp(Algorithm):
 
         server = FedKpServer(Model(),
                             store_distributions = store_distributions,
-                            cov_adj = cov_adj,
+                            cluster_mean = cluster_mean,
                             bandwidth=bandwidth,
                             optimizer=server_optimizer,
                             lr=server_lr,
