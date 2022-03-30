@@ -13,7 +13,7 @@ class FedPa(Algorithm):
                 batch_size=16,
                 clients_per_round=None,
                 client_lr = 0.01,
-                burn_in =  0,
+                client_burnin =  0,
                 K = 1,
                 shrinkage = 1,
                 mcmc_samples = 1,
@@ -35,7 +35,7 @@ class FedPa(Algorithm):
 
         self.fedPa_client = FedPaClient(Model(), None,
                         learning_rate = client_lr,
-                        burn_in =  burn_in,
+                        burn_in =  client_burnin,
                         K = K,
                         shrinkage = shrinkage,
                         mcmc_samples = mcmc_samples,
