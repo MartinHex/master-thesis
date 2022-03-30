@@ -21,7 +21,7 @@ class FedKp(Algorithm):
             server_momentum=1,
             clients_sample_alpha = 'inf',
             max_iter=100,
-            seed=seed
+            seed=1234
             ):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
