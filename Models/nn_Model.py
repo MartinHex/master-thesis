@@ -5,6 +5,8 @@ import copy
 from torch.autograd import Variable
 
 class nn_Model(nn.Module):
+
+    @abstractmethod
     def __init__(self):
         super().__init__()
 
@@ -126,3 +128,8 @@ class nn_Model(nn.Module):
 
     def set_weights(self, model_state):
         self.load_state_dict(copy.deepcopy(model_state))
+
+    def reset_model(self):
+        for layer in self.children():
+           if hasattr(layer, 'reset_parameters'):
+               layer.reset_parameters()

@@ -26,12 +26,18 @@ class FedKp(Algorithm):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
 
-        client = SGDClient(Model(),
-                            None,
-                            learning_rate=client_lr,
-                            momentum=momentum,
-                            decay=momentum,
-                            dampening=dampening)
+        if clients_per_round==None:
+            clients = [SGDClient(Model(), None,
+                                learning_rate=client_lr,
+                                momentum=momentum,
+                                decay=momentum,
+                                dampening=dampening) for _ in range(len(client_dataloaders))]
+        else:
+            clients = [SGDClient(Model(), None,
+                                learning_rate=client_lr,
+                                momentum=momentum,
+                                decay=momentum,
+                                dampening=dampening) for _ in range(clients_per_round)]
 
         server = FedKpServer(Model(),
                             store_distributions = store_distributions,
@@ -45,4 +51,4 @@ class FedKp(Algorithm):
                             momentum=server_momentum,
                             max_iter=max_iter)
 
-        super().__init__(server, client, client_dataloaders,clients_per_round=clients_per_round,seed=seed, clients_sample_alpha = clients_sample_alpha)
+        super().__init__(server, clients, client_dataloaders,clients_per_round=clients_per_round,seed=seed, clients_sample_alpha = clients_sample_alpha)

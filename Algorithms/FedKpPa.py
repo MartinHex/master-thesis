@@ -30,16 +30,26 @@ class FedKpPa(Algorithm):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
 
-        client = FedPaClient(Model(), None,
-                        learning_rate = client_lr,
-                        burn_in =  client_burnin,
-                        K = K,
-                        shrinkage = shrinkage,
-                        mcmc_samples = mcmc_samples,
-                        momentum=momentum,
-                        decay=momentum,
-                        dampening=dampening)
-
+        if clients_per_round==None:
+            clients = [FedPaClient(Model(), None,
+                            learning_rate = client_lr,
+                            burn_in =  client_burnin,
+                            K = K,
+                            shrinkage = shrinkage,
+                            mcmc_samples = mcmc_samples,
+                            momentum=momentum,
+                            decay=momentum,
+                            dampening=dampening)for _ in range(len(client_dataloaders))]
+        else:
+            clients = [FedPaClient(Model(), None,
+                            learning_rate = client_lr,
+                            burn_in =  client_burnin,
+                            K = K,
+                            shrinkage = shrinkage,
+                            mcmc_samples = mcmc_samples,
+                            momentum=momentum,
+                            decay=momentum,
+                            dampening=dampening) for _ in range(clients_per_round)]
 
         server = FedKpServer(Model(),
                             store_distributions = store_distributions,

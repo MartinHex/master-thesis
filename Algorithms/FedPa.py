@@ -33,21 +33,39 @@ class FedPa(Algorithm):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
 
-        self.fedPa_client = FedPaClient(Model(), None,
-                        learning_rate = client_lr,
-                        burn_in =  client_burnin,
-                        K = K,
-                        shrinkage = shrinkage,
-                        mcmc_samples = mcmc_samples,
-                        momentum=momentum,
-                        decay=momentum,
-                        dampening=dampening)
+        if clients_per_round==None:
+            self.fedPa_clients  = [FedPaClient(Model(), None,
+                                learning_rate = client_lr,
+                                burn_in =  client_burnin,
+                                K = K,
+                                shrinkage = shrinkage,
+                                mcmc_samples = mcmc_samples,
+                                momentum=momentum,
+                                decay=momentum,
+                                dampening=dampening) for _ in range(len(client_dataloaders))]
+        else:
+            self.fedPa_clients  = [FedPaClient(Model(), None,
+                                learning_rate = client_lr,
+                                burn_in =  client_burnin,
+                                K = K,
+                                shrinkage = shrinkage,
+                                mcmc_samples = mcmc_samples,
+                                momentum=momentum,
+                                decay=momentum,
+                                dampening=dampening) for _ in range(clients_per_round)]
 
-        self.SGD_client = SGDClient(Model(), None,
-                        learning_rate = client_lr,
-                        momentum=momentum,
-                        decay=momentum,
-                        dampening=dampening)
+        if clients_per_round==None:
+            self.SGD_clients  = [SGDClient(Model(), None,
+                                learning_rate=client_lr,
+                                momentum=momentum,
+                                decay=momentum,
+                                dampening=dampening) for _ in range(len(client_dataloaders))]
+        else:
+            self.SGD_clients  = [SGDClient(Model(), None,
+                                learning_rate=client_lr,
+                                momentum=momentum,
+                                decay=momentum,
+                                dampening=dampening) for _ in range(clients_per_round)]
 
         server = FedAvgServer(Model(),
                             optimizer=server_optimizer,
@@ -62,7 +80,7 @@ class FedPa(Algorithm):
         self.burnin=burnin
         self.tot_rounds = 0
 
-        super().__init__(server, self.SGD_client, client_dataloaders,seed=seed,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)
+        super().__init__(server, self.SGD_clients, client_dataloaders,seed=seed,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)
 
     def run(self,iterations, epochs = 1, device = None,option = 'mle',n_workers=3,
             callbacks=None,log_callbacks=False,log_dir=None,file_name=None):
@@ -83,7 +101,7 @@ class FedPa(Algorithm):
         #self.server.push_weights(self.clients)
         for round in range(iterations):
             if(self.tot_rounds==self.burnin):
-                self.clients = [copy.deepcopy(self.fedPa_client) for i in range(self.clients_per_round)]
+                self.clients = self.fedPa_client
             if(self.burnin>iterations):
                 raise Exception('Burnin larger than number of iterations')
 

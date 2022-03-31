@@ -11,7 +11,7 @@ import threading
 import numpy as np
 
 class Algorithm():
-    def __init__(self,server,client, dataloaders, clients_per_round=None,
+    def __init__(self,server,clients, dataloaders, clients_per_round=None,
                     clients_sample_alpha = 'inf', seed = 1234):
         np.random.seed(seed)
         self.dataloaders = dataloaders
@@ -21,7 +21,7 @@ class Algorithm():
         self.server = server
 
 
-        self.clients = [copy.deepcopy(client) for i in range(self.clients_per_round)]
+        self.clients = clients
         if clients_sample_alpha == 'inf':
             self.client_probabilities = [1/len(dataloaders)] * (len(dataloaders))
         else:
@@ -56,8 +56,9 @@ class Algorithm():
             for i, dataloader in enumerate(tqdm(dataloader_sample)):
                 # Initialize Client to run
                 self.clients[i].dataloader = dataloader
-                self._set_model_weight(i, option)
                 self.clients[i].reset_optimizer() # Reset optimizer so client momentum can be used, not momentum does not carry over between rounds
+                self.clients[i].model.reset_model()
+                self.clients[i].set_weights(self.server.get_weights())
                 loss = self.clients[i].train(epochs = epochs, device = device)
 
             dataloader_sizes = [len(dataloader.dataset) for dataloader in dataloader_sample]
