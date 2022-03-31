@@ -17,13 +17,14 @@ class nn_Model(nn.Module):
 
     def predict(self, input, device = None):
         self.eval()
-        if (device!= None): self.to(device)
-        if (device != None): input = input.to(device)
-        output = self(input)
-        if (device!= None):
-            self.to('cpu')
-            torch.cuda.empty_cache()
-        return output
+        with torch.no_grad():
+            if (device!= None): self.to(device)
+            if (device != None): input = input.to(device)
+            output = self(input)
+            if (device!= None):
+                self.to('cpu')
+                torch.cuda.empty_cache()
+            return output
 
     def evaluate(self,dataloader,loss_func, device = None, take_mean=True):
         """Evaluates the model on a given loss function.
@@ -33,25 +34,26 @@ class nn_Model(nn.Module):
                 - loss_func: Loss function to use for evaluation.
         """
         self.eval() # prep model for evaluation
-        loss_per_batch = []
-        if (device!= None): self.to(device)
-        for data, target in dataloader:
-            if(device!= None):
-                data = data.to(device)
-                target = target.to(device)
-            # forward pass: compute predicted outputs by passing inputs to the model
-            output = self(data)
-            # calculate the loss
-            loss = loss_func(output[0], target)
-            # update running validation loss
-            loss_per_batch.append(loss.item()/data.size(0))
-        if (device!= None):
-            self.to('cpu')
-            torch.cuda.empty_cache()
-        if(take_mean):
-            return sum(loss_per_batch)/len(loss_per_batch)
-        else:
-            return loss_per_batch
+        with torch.no_grad():
+            loss_per_batch = []
+            if (device!= None): self.to(device)
+            for data, target in dataloader:
+                if(device!= None):
+                    data = data.to(device)
+                    target = target.to(device)
+                # forward pass: compute predicted outputs by passing inputs to the model
+                output = self(data)
+                # calculate the loss
+                loss = loss_func(output[0], target)
+                # update running validation loss
+                loss_per_batch.append(loss.item()/data.size(0))
+            if (device!= None):
+                self.to('cpu')
+                torch.cuda.empty_cache()
+            if(take_mean):
+                return sum(loss_per_batch)/len(loss_per_batch)
+            else:
+                return loss_per_batch
 
     def train_model(self, dataloader,optimizer,loss_func=nn.CrossEntropyLoss(),
                     epochs = 1,device=None):
