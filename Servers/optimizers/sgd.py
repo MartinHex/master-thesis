@@ -10,8 +10,6 @@ class SGD(server_optimizer):
         self.lr = lr
 
     def get_grad(self,grad):
-        if(self.b_t==None):
-            self.b_t = grad
         for key in grad:
             grad[key]= self.momentum*self.b_t[key]+(1-self.tau)*grad[key]
             self.b_t[key] = grad[key].clone().detach()

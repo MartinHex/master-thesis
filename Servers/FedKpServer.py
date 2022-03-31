@@ -148,7 +148,7 @@ class FedKpServer(ProbabilisticServer):
             res_w[i] = res_w[i].add(cov_adj_w)
         return res_w
 
-    def _mean_shift(self,client_weights,init,tol=1e-7,device=None):
+    def _mean_shift(self,client_weights,init,tol=1e-6,device=None):
         w = init[self.nonzero_idx].to(device)
         H = self.bandwidths[self.nonzero_idx]
         n_nonzeros = len(w)

@@ -2,6 +2,7 @@ from Servers.ABCServer import ABCServer
 import torch
 from torch.distributions import Normal
 from torch.nn import NLLLoss
+from torch.nn.utils import clip_grad_norm_
 from torchcontrib.optim import SWA
 from torch.optim import SGD
 import random
@@ -100,7 +101,7 @@ class FedBeServer(ABCServer):
                  pred = self.model.predict(x)[0]
                  tmp_loss=(torch.mean(pred)*0-p[j])
                  tmp_loss.backward()
-                 nn.utils.clip_grad_norm_(self.parameters(), 10)
+                 clip_grad_norm_(self.parameters(), 10)
                  opt.step()
 
         if self.verbose: print('FedBE: SWA Destilation done, updating model weights.')
