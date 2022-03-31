@@ -11,17 +11,19 @@ import threading
 import numpy as np
 
 class Algorithm():
-    def __init__(self,server,clients, dataloaders, clients_per_round=None,
-                    clients_sample_alpha = 'inf', seed = 1234):
+    def __init__(self,server, dataloaders,clients=None, clients_per_round=None,
+                    clients_sample_alpha = 'inf', seed = 1234,client_generator=None):
         np.random.seed(seed)
         self.dataloaders = dataloaders
         self.clients_per_round = len(dataloaders) if clients_per_round==None else clients_per_round
         if( len(dataloaders)<self.clients_per_round):
             raise Exception('More clients per round than clients provided.')
         self.server = server
-
-
-        self.clients = clients
+        self.client_generator = client_generator
+        if self.client_generator!=None:
+            self.clients = [self.client_generator(None,0) for _ in range(self.clients_per_round)]
+        else:
+            self.clients=clients
         if clients_sample_alpha == 'inf':
             self.client_probabilities = [1/len(dataloaders)] * (len(dataloaders))
         else:
@@ -55,9 +57,12 @@ class Algorithm():
 
             for i, dataloader in enumerate(tqdm(dataloader_sample)):
                 # Initialize Client to run
-                self.clients[i].dataloader = dataloader
-                self.clients[i].reset_optimizer() # Reset optimizer so client momentum can be used, not momentum does not carry over between rounds
-                self.clients[i].model.reset_model()
+                if self.client_generator!=None:
+                    self.clients[i] = self.client_generator(dataloader,round)
+                else:
+                    self.clients[i].dataloader = dataloader
+                    self.clients[i].reset_optimizer() # Reset optimizer so client momentum can be used, not momentum does not carry over between rounds
+                    self.clients[i].model.reset_model()
                 self.clients[i].set_weights(self.server.get_weights())
                 loss = self.clients[i].train(epochs = epochs, device = device)
 
@@ -67,14 +72,6 @@ class Algorithm():
             # Run callbacks and log results
             if (callbacks != None): self._run_callbacks(callbacks)
             if log_callbacks: self._save_callbacks(file_path)
-
-
-    def _train_client(self,i,dataloader,option,epochs,device,losses):
-        # Initialize Client to run
-        self.clients[i].dataloader = dataloader
-        self._set_model_weight(i, option)
-        loss = self.clients[i].train(epochs = epochs, device = device)
-        losses.append(loss)
 
     def _run_callbacks(self,callbacks):
         for callback in callbacks:

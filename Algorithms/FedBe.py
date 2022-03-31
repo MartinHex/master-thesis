@@ -47,18 +47,12 @@ class FedBe(Algorithm):
 
         loc_data = DataLoader(loc_data,batch_size=batch_size,shuffle=True)
 
-        if clients_per_round==None:
-            clients = [SGDClient(Model(), None,
+        def client_generator(dataloader,round):
+            return SGDClient(Model(), dataloader,
                                 learning_rate=client_lr,
                                 momentum=momentum,
                                 decay=momentum,
-                                dampening=dampening) for _ in range(len(client_dataloaders))]
-        else:
-            clients = [SGDClient(Model(), None,
-                                learning_rate=client_lr,
-                                momentum=momentum,
-                                decay=momentum,
-                                dampening=dampening) for _ in range(clients_per_round)]
+                                dampening=dampening)
 
         server = FedBeServer(Model(),loc_data,
                             M=M,
@@ -73,4 +67,4 @@ class FedBe(Algorithm):
                             b2=b2,
                             momentum=server_momentum)
 
-        super().__init__(server, clients, client_dataloaders_adj,clients_per_round=clients_per_round,seed=seed, clients_sample_alpha = clients_sample_alpha)
+        super().__init__(server, client_dataloaders_adj,client_generator=client_generator,clients_per_round=clients_per_round,seed=seed, clients_sample_alpha = clients_sample_alpha)

@@ -33,39 +33,28 @@ class FedPa(Algorithm):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
 
-        if clients_per_round==None:
-            self.fedPa_clients  = [FedPaClient(Model(), None,
-                                learning_rate = client_lr,
-                                burn_in =  client_burnin,
-                                K = K,
-                                shrinkage = shrinkage,
-                                mcmc_samples = mcmc_samples,
-                                momentum=momentum,
-                                decay=momentum,
-                                dampening=dampening) for _ in range(len(client_dataloaders))]
-        else:
-            self.fedPa_clients  = [FedPaClient(Model(), None,
-                                learning_rate = client_lr,
-                                burn_in =  client_burnin,
-                                K = K,
-                                shrinkage = shrinkage,
-                                mcmc_samples = mcmc_samples,
-                                momentum=momentum,
-                                decay=momentum,
-                                dampening=dampening) for _ in range(clients_per_round)]
 
-        if clients_per_round==None:
-            self.SGD_clients  = [SGDClient(Model(), None,
-                                learning_rate=client_lr,
-                                momentum=momentum,
-                                decay=momentum,
-                                dampening=dampening) for _ in range(len(client_dataloaders))]
-        else:
-            self.SGD_clients  = [SGDClient(Model(), None,
-                                learning_rate=client_lr,
-                                momentum=momentum,
-                                decay=momentum,
-                                dampening=dampening) for _ in range(clients_per_round)]
+        if(burnin<0 and not isinstance(burnin, int)):
+            raise Exception('Invalid value of burnin.')
+        self.burnin=burnin
+
+        def client_generator(dataloader,round):
+            if round<self.burnin:
+                return SGDClient(Model(), dataloader,
+                                    learning_rate=client_lr,
+                                    momentum=momentum,
+                                    decay=momentum,
+                                    dampening=dampening)
+            else:
+                return FedPaClient(Model(), dataloader,
+                                    learning_rate = client_lr,
+                                    burn_in =  client_burnin,
+                                    K = K,
+                                    shrinkage = shrinkage,
+                                    mcmc_samples = mcmc_samples,
+                                    momentum=momentum,
+                                    decay=momentum,
+                                    dampening=dampening)
 
         server = FedAvgServer(Model(),
                             optimizer=server_optimizer,
@@ -75,56 +64,4 @@ class FedPa(Algorithm):
                             b2=b2,
                             momentum=server_momentum)
 
-        if(burnin<0 and not isinstance(burnin, int)):
-            raise Exception('Invalid value of burnin.')
-        self.burnin=burnin
-        self.tot_rounds = 0
-
-        super().__init__(server, self.SGD_clients, client_dataloaders,seed=seed,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)
-
-    def run(self,iterations, epochs = 1, device = None,option = 'mle',n_workers=3,
-            callbacks=None,log_callbacks=False,log_dir=None,file_name=None):
-
-        if(option not in ['mle','single_sample','multi_sample']):
-            raise Exception("""Incorrect option provided must be either 'mle', 'single_sample' or 'multi_sample'""")
-
-        # Set up path for saving callbacks
-        if log_callbacks:
-            if log_dir==None:
-                log_dir = os.path.join(os.getcwd(), 'data', 'logs')
-            if not os.path.exists(log_dir): os.mkdir(log_dir)
-            if file_name==None:
-                file_name = 'experiment_{}.json'.format(datetime.now().strftime("%d_%m_%Y_%H_%M"))
-            file_path = os.path.join(log_dir, file_name)
-        self.callback_data = defaultdict(lambda: [])
-
-        #self.server.push_weights(self.clients)
-        for round in range(iterations):
-            if(self.tot_rounds==self.burnin):
-                self.clients = self.fedPa_client
-            if(self.burnin>iterations):
-                raise Exception('Burnin larger than number of iterations')
-
-            print('---------------- Round {} ----------------'.format(round + 1))
-            if log_callbacks: self.callback_data['timestamps'].append(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
-
-            if option == 'single_sample': self.server.set_weights(self.server.sample_model())
-            dataloader_sample = self.sample_dataloaders()
-
-            for i, dataloader in enumerate(tqdm(dataloader_sample)):
-                # Initialize Client to run
-                self.clients[i].dataloader = dataloader
-                self._set_model_weight(i, option)
-                loss = self.clients[i].train(epochs = epochs, device = device)
-
-            self.server.aggregate(self.clients, device=device)
-            self.tot_rounds +=1
-
-            # Run callbacks and log results
-            if (callbacks != None): self._run_callbacks(callbacks)
-            if log_callbacks: self._save_callbacks(file_path)
-        return None
-
-    def reset_burnin(self):
-        self.tot_rounds = 0
-        self.clients = [copy.deepcopy(self.fedPa_client) for i in range(self.clients_per_round)]
+        super().__init__(server, client_dataloaders,client_generator=client_generator,seed=seed,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)

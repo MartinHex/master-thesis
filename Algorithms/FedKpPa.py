@@ -25,32 +25,33 @@ class FedKpPa(Algorithm):
             server_momentum=1,
             clients_sample_alpha = 'inf',
             max_iter=100,
-            seed=1234
+            seed=1234,
+            burnin=0
             ):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
 
-        if clients_per_round==None:
-            clients = [FedPaClient(Model(), None,
-                            learning_rate = client_lr,
-                            burn_in =  client_burnin,
-                            K = K,
-                            shrinkage = shrinkage,
-                            mcmc_samples = mcmc_samples,
-                            momentum=momentum,
-                            decay=momentum,
-                            dampening=dampening)for _ in range(len(client_dataloaders))]
-        else:
-            clients = [FedPaClient(Model(), None,
-                            learning_rate = client_lr,
-                            burn_in =  client_burnin,
-                            K = K,
-                            shrinkage = shrinkage,
-                            mcmc_samples = mcmc_samples,
-                            momentum=momentum,
-                            decay=momentum,
-                            dampening=dampening) for _ in range(clients_per_round)]
+        if(burnin<0 and not isinstance(burnin, int)):
+            raise Exception('Invalid value of burnin.')
+        self.burnin=burnin
 
+        def client_generator(dataloader,round):
+            if round<self.burnin:
+                return SGDClient(Model(), dataloader,
+                                    learning_rate=client_lr,
+                                    momentum=momentum,
+                                    decay=momentum,
+                                    dampening=dampening)
+            else:
+                return FedPaClient(Model(), dataloader,
+                                    learning_rate = client_lr,
+                                    burn_in =  client_burnin,
+                                    K = K,
+                                    shrinkage = shrinkage,
+                                    mcmc_samples = mcmc_samples,
+                                    momentum=momentum,
+                                    decay=momentum,
+                                    dampening=dampening)
         server = FedKpServer(Model(),
                             store_distributions = store_distributions,
                             cluster_mean = cluster_mean,
@@ -63,4 +64,4 @@ class FedKpPa(Algorithm):
                             momentum=server_momentum,
                             max_iter=max_iter)
 
-        super().__init__(server, client, client_dataloaders,clients_per_round=clients_per_round,seed=seed, clients_sample_alpha = clients_sample_alpha)
+        super().__init__(server, client_dataloaders,client_generator=client_generator,clients_per_round=clients_per_round,seed=seed, clients_sample_alpha = clients_sample_alpha)

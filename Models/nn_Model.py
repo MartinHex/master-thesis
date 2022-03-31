@@ -124,10 +124,16 @@ class nn_Model(nn.Module):
         return loss.item()
 
     def get_weights(self):
-        return  copy.deepcopy(self.state_dict())
+        weights = {}
+        for k,v in self.state_dict().items():
+            weights[k] = v.detach().clone()
+        return  weights
 
     def set_weights(self, model_state):
-        self.load_state_dict(copy.deepcopy(model_state))
+        weights = {}
+        for k,v in model_state.items():
+            weights[k] = v.detach().clone()
+        self.load_state_dict(weights)
 
     def reset_model(self):
         for layer in self.children():
