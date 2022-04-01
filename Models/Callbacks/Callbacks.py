@@ -14,7 +14,7 @@ class Callbacks():
         client_weights = [_model_weight_to_array(c.get_weights()) for c in algorithm.clients]
         stacked_weights = torch.stack(client_weights, 0)
         means = torch.mean(stacked_weights, 0)
-        std = torch.std(stacked_weights, 0)
+        std = torch.std(stacked_weights, 0)+0.00001
         moving_average = 0
         for i in range(len(means)):
             (s, p) = kstest(stacked_weights[:,i], 'norm', (means[i], std[i]))
@@ -125,6 +125,48 @@ class Callbacks():
         if self.verbose:
             print("Server average val f1 score: {:.2f}".format(np.sum(f1) / (len(f1))))
         return {'server_f1': f1}
+
+    def server_training_loss(self, algorithm):
+        client_losses = []
+        server = algorithm.server
+        for i, client in enumerate(algorithm.clients):
+            client_loss = server.evaluate(client.dataloader, device = self.device,take_mean=False)
+            client_loss = np.sum(client_loss)
+            client_losses.append(client_loss)
+            if self.verbose:
+                print("Server Model on sampled Client {} training loss: {:.3f}".format(i+1,client_loss))
+        return {'server_training_loss':client_losses}
+
+    def client_training_loss(self, algorithm):
+        client_losses = []
+        for i, client in enumerate(algorithm.clients):
+            client_loss = client.evaluate(client.dataloader, device = self.device,take_mean=False)
+            client_loss = np.sum(client_loss)
+            client_losses.append(client_loss)
+            if self.verbose:
+                print("Sampled Client {} training loss: {:.3f}".format(i+1,client_loss))
+        return {'client_training_loss':client_losses}
+
+    def server_training_accuracy(self, algorithm):
+        client_accuracies = []
+        model = algorithm.server.model
+        model.eval()
+        for i, client in enumerate(algorithm.clients):
+            accuracy = _accuracy(model, client.dataloader, self.device)
+            client_accuracies.append(accuracy)
+            if self.verbose:
+                print("Server Model on sampled Client {} training accuracy: {:.3f}".format(i+1,accuracy))
+        return {'server_training_accuracy':client_accuracies}
+
+    def client_training_accuracy(self, algorithm):
+        client_accuracies = []
+        for i, client in enumerate(algorithm.clients):
+            client.model.eval()
+            accuracy = _accuracy(client.model, client.dataloader, self.device)
+            client_accuracies.append(accuracy)
+            if self.verbose:
+                print("Sampled Client {} training accuracy: {:.3f}".format(i+1,accuracy))
+        return {'client_training_accuracy':client_accuracies}
 
 def _model_weight_to_array(w):
     flattened = torch.cat([w[k].flatten() for k in w]).detach()
