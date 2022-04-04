@@ -68,7 +68,6 @@ class DirichletCifar100(FederatedDataLoader):
         self.trainset = torchvision.datasets.CIFAR100(root= './data', train = True,
                             download = download,transform=tt.Compose([
                                     tt.ToTensor(),
-                                    tt.RandomCrop(24),
                                     tt.Normalize(mean, std)
                                     ]))
 
@@ -111,8 +110,9 @@ class DirichletCifar100(FederatedDataLoader):
             List of dataloaders with data in format (Tensor, int).
         """
         datasets = []
+        transform = tt.RandomCrop(24)
         for client in self.split_trainset:
-            datasets.append(ImageDataset(client, label))
+            datasets.append(ImageDataset(client, label, transform = transform))
         dataloaders = []
         for dataset in datasets:
             dataloaders.append(DataLoader(dataset, batch_size = batch_size, shuffle = shuffle))
@@ -213,7 +213,7 @@ class DirichletCifar100(FederatedDataLoader):
 
 
 class ImageDataset(Dataset):
-    def __init__(self, data, label):
+    def __init__(self, data, label, transform = None):
         """Constructor
 
         Args:
@@ -222,6 +222,7 @@ class ImageDataset(Dataset):
         """
         self.data = data
         self.label = label
+        self.transform = transform
 
     def __getitem__(self, index):
         """Get sample by index
@@ -233,6 +234,7 @@ class ImageDataset(Dataset):
              The index'th sample (Tensor, int)
         """
         tensor, coarse_label, fine_label = self.data[index]
+        if self.transform != None: tensor = self.transform(tensor)
         if self.label == 'fine':
             return tensor, fine_label
         elif self.label == 'coarse':
