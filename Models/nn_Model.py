@@ -3,6 +3,7 @@ from torch import nn
 import torch
 import copy
 from torch.autograd import Variable
+from torch.nn.utils import clip_grad_norm_
 
 class nn_Model(nn.Module):
 
@@ -80,6 +81,7 @@ class nn_Model(nn.Module):
                 loss = loss_func(output, b_y)
                 # clear gradients for this training step
                 optimizer.zero_grad()
+                clip_grad_norm_(self.parameters(),1)
                 # backpropagation, compute gradients
                 loss.backward()
                 # apply gradients
@@ -115,6 +117,7 @@ class nn_Model(nn.Module):
                 loss = loss_func(output, b_y)
                 # clear gradients for this training step
                 optimizer.zero_grad()
+                clip_grad_norm_(self.parameters(),1)
                 # backpropagation, compute gradients
                 loss.backward()
                 # apply gradients

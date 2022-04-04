@@ -20,10 +20,11 @@ class ABCServer(ABC):
         pass
 
     def aggregate(self, clients,device=None, client_scaling = None):
-        w_old = self.get_weights()
-        w_new = self.combine(clients,device=device, client_scaling = client_scaling)
-        if self.optimizer: w_new = self.fedOpt(w_new,w_old)
-        self.set_weights(w_new)
+        with torch.no_grad():
+            w_old = self.get_weights()
+            w_new = self.combine(clients,device=device, client_scaling = client_scaling)
+            if self.optimizer: w_new = self.fedOpt(w_new,w_old)
+            self.set_weights(w_new)
 
     def get_weights(self):
         return self.model.get_weights()
