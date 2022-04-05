@@ -54,7 +54,7 @@ class FedKpServer(ProbabilisticServer):
 
         # Calculate bandwiths
         self.bandwidths = self.bandwidth_method(client_weights,device=device)
-        self.nonzero_idx = self.bandwidths.nonzero().flatten()
+        self.nonzero_idx = (self.bandwidths<1e-7).nonzero().flatten()
 
         # Mean shift algorithm:
         if self.cluster_mean:
