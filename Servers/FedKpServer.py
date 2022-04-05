@@ -42,7 +42,7 @@ class FedKpServer(ProbabilisticServer):
     def combine(self, clients,device=None, client_scaling = None):
         # List and translate data into numpy matrix
         client_weights = [self._model_weight_to_array(c.get_weights()) for c in clients]
-        client_weights = torch.stack(client_weights)
+        client_weights = torch.stack(client_weights).to(device)
         print('Aggregating Models.')
 
         # Kernel Esstimation
@@ -55,12 +55,12 @@ class FedKpServer(ProbabilisticServer):
 
         # Calculate bandwiths
         self.bandwidths = self.bandwidth_method(client_weights,device=device)*self.bandwidth_scaling
-        self.nonzero_idx = (self.bandwidths>1e-5).nonzero().flatten()
+        self.nonzero_idx = self.bandwidths.nonzero().flatten()
 
 
         # Mean shift algorithm:
         if self.cluster_mean:
-            res_model_w = torch.zeros(self.model_size)
+            res_model_w = torch.zeros(self.model_size).to(device)
             for i,client_w in enumerate(client_weights):
                 client_adj = self._mean_shift(client_weights,client_w,device=device)/len(client_weights)
                 if(torch.any(torch.isnan(client_adj))): print('Nan found inclient adjusted weigth')
@@ -69,7 +69,7 @@ class FedKpServer(ProbabilisticServer):
             mean_model = torch.mean(client_weights,0)
             res_model_w = self._mean_shift(client_weights,mean_model,device=device)
 
-        res_model = self._array_to_model_weight(res_model_w)
+        res_model = self._array_to_model_weight(res_model_w.to('cpu'))
         return res_model
 
     def sample_model(self):
@@ -169,15 +169,15 @@ class FedKpServer(ProbabilisticServer):
                 denominator += exp_dist
                 numerator += exp_dist*w_i
             m_x = numerator/(denominator)
+            nan_idx = m_x.isnan().nonzero().flatten()
+            m_x[nan_idx] = w[nan_idx]
             dif =torch.mean(torch.abs(w-m_x))
             w = torch.clone(m_x)
             i+=1
-        if(torch.any(torch.isnan(w))): print('NaN found in mean shift')
         if(i>=self.max_iter):
             warnings.warn("Maximal iteration reacher. You may want to look into increasing the amount of iterations.")
         w_res = init
-        w_res[self.nonzero_idx] = w.to('cpu')
-        if(torch.any(torch.isnan(w_res))): print('NaN resulting weight')
+        w_res[self.nonzero_idx] = w
         return w_res
 
     def _scott(self,client_weights,device=None):
