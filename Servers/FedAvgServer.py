@@ -1,4 +1,5 @@
 from Servers.ABCServer import ABCServer
+from collections import defaultdict
 import torch
 
 class FedAvgServer(ABCServer):
@@ -13,10 +14,10 @@ class FedAvgServer(ABCServer):
             client_scaling = torch.ones(normalizing)
 
         client_weights = [cl.get_weights() for cl in clients]
-
-        new_weights = {}
-        for key in client_weights[0]:
-            client_weights_key = [client_scaling[i]*c[key] for i,c in enumerate(client_weights)]
-            new_weights[key] = torch.stack(client_weights_key, dim = 0).sum(dim = 0) / normalizing
+        n_clents = len(client_weights)
+        new_weights = defaultdict(lambda:0)
+        for i,cw in enumerate(client_weights):
+            for k in cw:
+                new_weights[k]+=cw[k]/n_clents
 
         return new_weights
