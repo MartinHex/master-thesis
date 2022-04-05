@@ -5,7 +5,7 @@ from collections import defaultdict
 
 class FedPaClient(Base_Client):
     def __init__(self, model, dataloader, learning_rate = 0.01, burn_in =  0,
-                K = 1, shrinkage = 1, mcmc_samples = 1,momentum=0,decay=0,dampening=0):
+            shrinkage = 1,momentum=0,decay=0,dampening=0):
         super(FedPaClient, self).__init__(model)
         self.optimizer = optim.SGD(self.model.parameters(), lr = learning_rate,
                                 momentum=momentum,weight_decay=decay,dampening=dampening)
@@ -61,7 +61,7 @@ class FedPaClient(Base_Client):
             # Update running mean of the samples.
             samples_ra = ((t - 1) * samples_ra + s) / t
         final_delta = delta * (1 + (num_samples - 1) * rho)
-        new_weights = initial_weights.sub(final_delta)
+        new_weights = initial_weights.add(final_delta)
         new_weights = self._array_to_model_weight(new_weights)
         return new_weights
 

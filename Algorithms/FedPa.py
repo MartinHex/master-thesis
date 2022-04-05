@@ -14,9 +14,7 @@ class FedPa(Algorithm):
                 clients_per_round=None,
                 client_lr = 0.01,
                 client_burnin =  0,
-                K = 1,
                 shrinkage = 1,
-                mcmc_samples = 1,
                 momentum=0,
                 decay=0,
                 dampening=0,
@@ -25,7 +23,7 @@ class FedPa(Algorithm):
                 tau=0.1,
                 b1=.9,
                 b2=0.99,
-                server_momentum=1,
+                server_momentum=0,
                 burnin=0,
                 clients_sample_alpha = 'inf',
                 seed=1234
@@ -49,9 +47,7 @@ class FedPa(Algorithm):
                 return FedPaClient(Model(), dataloader,
                                     learning_rate = client_lr,
                                     burn_in =  client_burnin,
-                                    K = K,
                                     shrinkage = shrinkage,
-                                    mcmc_samples = mcmc_samples,
                                     momentum=momentum,
                                     decay=momentum,
                                     dampening=dampening)
