@@ -1,12 +1,11 @@
+import sys
+sys.path.append('.')
 #Import models
 from Models.MNIST_Model_lite import MNIST_Model as Model
 from Dataloaders.Mnist import Mnist as Dataloader
 # Import Algorithms
 from Algorithms.FedAvg import FedAvg
-from Algorithms.FedBe import FedBe
 from Algorithms.FedPa import FedPa
-from Algorithms.FedKp import FedKp
-from Algorithms.FedAg import FedAg
 from Algorithms.Algorithm import Algorithm
 # Import servers and clients for CustomAlgorithms
 from Clients.FedPaClient import FedPaClient
@@ -15,58 +14,61 @@ from Servers.FedAvgServer import FedAvgServer
 from Models.Callbacks.Callbacks import Callbacks
 import matplotlib.pyplot as plt
 import torch
+import os
+import numpy as np
 
 number_of_clients = 100
+clients_per_round = 20
 batch_size = 16
 dataloader = Dataloader(number_of_clients)
 test_data = dataloader.get_test_dataloader(batch_size)
 device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
 
 # Create callback functions that are run at the end of every round
-cbs_pa = Callbacks(test_data, device = device, verbose = False)
-cbs_be = Callbacks(test_data, device = device, verbose = False)
-cbs_ag = Callbacks(test_data, device = device, verbose = False)
-cbs_kp = Callbacks(test_data, device = device, verbose = False)
-callbacks_pa = [
-    ('client_loss', cbs_pa.client_loss),
-    ('server_pa_loss', cbs_pa.server_loss),
-    ('client_accuracy', cbs_pa.client_accuracy),
-    ('server_pa_accuracy', cbs_pa.server_accuracy),
-]
-callbacks_be = [
-    ('client_loss', cbs_be.client_loss),
-    ('server_be_loss', cbs_be.server_loss),
-    ('client_accuracy', cbs_be.client_accuracy),
-    ('server_be_accuracy', cbs_be.server_accuracy),
-]
-callbacks_ag = [
-    ('client_loss', cbs_ag.client_loss),
-    ('server_ag_loss', cbs_ag.server_loss),
-    ('client_accuracy', cbs_ag.client_accuracy),
-    ('server_ag_accuracy', cbs_ag.server_accuracy),
-]
-callbacks_kp = [
-    ('client_loss', cbs_kp.client_loss),
-    ('server_kp_loss', cbs_kp.server_loss),
-    ('client_accuracy', cbs_kp.client_accuracy),
-    ('server_kp_accuracy', cbs_kp.server_accuracy),
-]
+cbs = Callbacks(test_data, device = device, verbose = True)
+callbacks = [cbs.server_loss, cbs.server_accuracy]
 
-# Set parameters to replicate paper results
-fedpa_clients = [FedPaClient( Model(), dl, learning_rate = 0.01, burn_in =  100,
-                                K = 5, shrinkage = 0.1, mcmc_samples = 100)
-                                for dl in dataloader.get_training_dataloaders(16)]
-fedpa_server = FedAvgServer(Model())
+fedpa = FedPa(dataloader=dataloader, Model=Model,
+    clients_per_round = clients_per_round,client_lr = 0.01,
+    batch_size=batch_size, shrinkage = 0.1, burnin = 5)
 
-fedpa = Algorithm(fedpa_server,fedpa_clients, callbacks = callbacks_pa)
+fedavg = FedAvg(dataloader=dataloader, Model=Model,
+    clients_per_round = clients_per_round,client_lr = 0.01,
+    batch_size=batch_size)
+
 # Initiate algorithms with same parameters as in papers.
-alghs = [FedAg(dataloader=dataloader, Model=Model, callbacks = callbacks_ag, save_callbacks = True),
-        FedBe(dataloader=dataloader, Model=Model, callbacks = callbacks_be, save_callbacks = True),
-        fedpa,
-        FedKp(dataloader=dataloader, Model=Model, callbacks = callbacks_kp, save_callbacks = True)
-]
+alghs = {
+    'FedAvg': fedavg,
+    'FedPA': fedpa,
 
-alghs[0].server.push_weights([alg.server for alg in alghs[1:]])
-iterations = 30
+}
+
+print('Setting up save paths')
+test_dir = os.path.join('data/results/MNIST')
+if not os.path.exists(test_dir): os.mkdir(test_dir)
+out_dir = os.path.join(test_dir,'experiment')
+if not os.path.exists(out_dir): os.mkdir(out_dir)
+model_dir = os.path.join(out_dir,'Models')
+if not os.path.exists(model_dir): os.mkdir(model_dir)
+log_dir = os.path.join(out_dir,'logs')
+if not os.path.exists(log_dir): os.mkdir(log_dir)
+
+# Load initial model and save a new initial model if it doesn't exist.
+print('Initializing models')
+initial_model_path = os.path.join(test_dir,'initial_model')
+if os.path.exists(initial_model_path):
+    initial_model = torch.load(initial_model_path)
+else:
+    initial_model = alghs[list(alghs.keys())[0]].server.get_weights()
+    torch.save(initial_model, initial_model_path)
+
+iterations = 10
+print('Running Algorithms')
 for alg in alghs:
-    alg.run(iterations, epochs = 5)
+    torch.manual_seed(0)
+    np.random.seed(0)
+    print('Running: {}'.format(alg))
+    alghs[alg].server.set_weights(initial_model)
+    alghs[alg].run(iterations, epochs = 5, device = device,callbacks=callbacks,log_callbacks=True, log_dir = log_dir,file_name=alg)
+    out_path = os.path.join(model_dir,'model_%s_iter_%i'%(alg,iterations))
+    torch.save(alghs[alg].server.get_weights(), out_path)
