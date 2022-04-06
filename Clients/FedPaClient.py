@@ -5,7 +5,7 @@ from collections import defaultdict
 
 class FedPaClient(Base_Client):
     def __init__(self, model, dataloader, learning_rate = 0.01, burn_in =  0,
-                K = 1, shrinkage = 1, mcmc_samples = 1,momentum=0,decay=0,dampening=0):
+            shrinkage = 1,momentum=0,decay=0,dampening=0):
         super(FedPaClient, self).__init__(model)
         self.optimizer = optim.SGD(self.model.parameters(), lr = learning_rate,
                                 momentum=momentum,weight_decay=decay,dampening=dampening)
@@ -54,6 +54,7 @@ class FedPaClient(Base_Client):
             # Compute delta.
             gamma = rho * (t - 1) / t
             c = gamma * (t * dot_u_d - dot_u_v) / (1 + gamma * dot_u_v)
+            # Calculate new delta and replace nans
             delta -= (1 + c) * v / t
             # Update the DP state.
             dp["v"].append(v)
@@ -61,9 +62,12 @@ class FedPaClient(Base_Client):
             # Update running mean of the samples.
             samples_ra = ((t - 1) * samples_ra + s) / t
         final_delta = delta * (1 + (num_samples - 1) * rho)
+        # Avoid gradient clipping
+        norm = torch.norm(final_delta)
+        if(norm>1):final_delta=final_delta/norm
         new_weights = initial_weights.sub(final_delta)
         new_weights = self._array_to_model_weight(new_weights)
-        return new_weights
+        self.set_weights(new_weights)
 
     def _produce_iasg_sample(self, device):
         sample_weight = dict()

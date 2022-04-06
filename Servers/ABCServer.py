@@ -6,10 +6,10 @@ import torch
 
 class ABCServer(ABC):
 
-    def __init__(self,model,optimizer='none',lr=1,tau=0.1,b1=.9,b2=0.99,momentum=1):
+    def __init__(self,model,optimizer='none',lr=1,tau=0.1,b1=.9,b2=0.99,momentum=0):
         self.model = model
         if optimizer == 'sgd':
-            self.optimizer= SGD(lr=lr,momentum=momentum)
+            self.optimizer= SGD(lr=lr,momentum=momentum,tau=tau)
         elif optimizer == 'adam':
             self.optimizer= Adam(lr=lr,tau=tau,b1=b1,b2=b2)
         else:
