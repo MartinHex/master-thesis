@@ -55,7 +55,7 @@ class Algorithm():
             if option == 'single_sample': self.server.set_weights(self.server.sample_model())
             dataloader_sample = self.sample_dataloaders()
 
-            for i, dataloader in enumerate(tqdm(dataloader_sample)):
+            for i, dataloader in enumerate(dataloader_sample):
                 # Initialize Client to run
                 if self.client_generator!=None:
                     self.clients[i] = self.client_generator(dataloader,round)
@@ -64,7 +64,7 @@ class Algorithm():
                     self.clients[i].reset_optimizer() # Reset optimizer so client momentum can be used, not momentum does not carry over between rounds
                     self.clients[i].model.reset_model()
             self.server.push_weights(self.clients)
-            for client in self.clients:
+            for client in tqdm(self.clients):
                 loss = client.train(epochs = epochs, device = device)
 
             dataloader_sizes = [len(dataloader.dataset) for dataloader in dataloader_sample]

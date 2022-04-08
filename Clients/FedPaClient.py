@@ -120,7 +120,6 @@ class FedPaClient(Base_Client):
             weights_delta = dict()
             for key in weights_delta_tilde:
                 weights_delta[key] = weights_delta_tilde[key] * (1 + (n - 1) * rho)
-                norm += torch.sum(torch.square(weights_delta[key]))
 
             # Update from gradient to model weights.
             new_weights = dict()
