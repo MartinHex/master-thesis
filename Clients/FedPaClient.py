@@ -44,14 +44,14 @@ class FedPaClient(Base_Client):
             weights_sample_mean = samples[0]
             weights_delta_tilde = dict()
             for key in weights_sample_mean:
-                weights_delta_tilde[key] = x_0[key] - weights_sample_mean[key]
+                weights_delta_tilde[key] = x_0[key].to(device) - weights_sample_mean[key]
 
             # Second Sample
             un_flat = dict()
             vn_flat = dict()
             for key in samples[1]:
-                un_flat[key] = (samples[1][key].clone() - weights_sample_mean[key].clone()).flatten()
-                vn_flat[key] = (samples[1][key].clone() - weights_sample_mean[key].clone()).flatten()
+                un_flat[key] = (samples[1][key] - weights_sample_mean[key]).flatten()
+                vn_flat[key] = (samples[1][key] - weights_sample_mean[key]).flatten()
 
             # Compute `dot(vn, un)`.
             dot_vn_un = 0
@@ -78,7 +78,7 @@ class FedPaClient(Base_Client):
 
                 # Compute v_{n-1, n} (solution of `sigma_{n-1} x = u_n`).
                 # Step 1: compute `vk_coeff = gamma * dot(v_k, u_n) / (1 + gamma * uv_k)`.
-                gammas_range = 2 + torch.arange(0, n - 2)
+                gammas_range = 2 + torch.arange(0, n - 2).to(device)
                 gammas = rho * (gammas_range - 1) / gammas_range
                 dot_vk_un = dict()
                 for key in un_flat:
@@ -120,11 +120,12 @@ class FedPaClient(Base_Client):
             weights_delta = dict()
             for key in weights_delta_tilde:
                 weights_delta[key] = weights_delta_tilde[key] * (1 + (n - 1) * rho)
+                norm += torch.sum(torch.square(weights_delta[key]))
 
             # Update from gradient to model weights.
             new_weights = dict()
             for key in weights_delta:
-                new_weights[key] = x_0[key].sub(weights_delta[key])
+                new_weights[key] = x_0[key].sub(weights_delta[key].cpu())
             self.set_weights(new_weights)
 
     def _produce_iasg_sample(self, device):
