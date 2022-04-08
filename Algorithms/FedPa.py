@@ -41,7 +41,7 @@ class FedPa(Algorithm):
                 return SGDClient(Model(), dataloader,
                                     learning_rate=client_lr,
                                     momentum=momentum,
-                                    decay=momentum,
+                                    decay=decay,
                                     dampening=dampening)
             else:
                 return FedPaClient(Model(), dataloader,

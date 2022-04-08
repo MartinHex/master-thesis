@@ -51,7 +51,7 @@ class FedBe(Algorithm):
             return SGDClient(Model(), dataloader,
                                 learning_rate=client_lr,
                                 momentum=momentum,
-                                decay=momentum,
+                                decay=decay,
                                 dampening=dampening)
 
         server = FedBeServer(Model(),loc_data,

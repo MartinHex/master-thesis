@@ -40,7 +40,7 @@ class FedKpPa(Algorithm):
                 return SGDClient(Model(), dataloader,
                                     learning_rate=client_lr,
                                     momentum=momentum,
-                                    decay=momentum,
+                                    decay=decay,
                                     dampening=dampening)
             else:
                 return FedPaClient(Model(), dataloader,
@@ -50,7 +50,7 @@ class FedKpPa(Algorithm):
                                     shrinkage = shrinkage,
                                     mcmc_samples = mcmc_samples,
                                     momentum=momentum,
-                                    decay=momentum,
+                                    decay=decay,
                                     dampening=dampening)
         server = FedKpServer(Model(),
                             store_distributions = store_distributions,
