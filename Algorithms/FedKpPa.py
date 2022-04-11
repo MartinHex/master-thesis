@@ -1,5 +1,6 @@
 from Servers.FedKpServer import FedKpServer
 from Clients.FedPaClient import FedPaClient
+from Clients.SGDClient import SGDClient
 from Algorithms.Algorithm import Algorithm
 
 class FedKpPa(Algorithm):

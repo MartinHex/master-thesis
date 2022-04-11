@@ -15,11 +15,8 @@ class Callbacks():
         stacked_weights = torch.stack(client_weights, 0)
         means = torch.mean(stacked_weights, 0)
         std = torch.std(stacked_weights, 0)+0.00001
-        moving_average = 0
-        for i in range(len(means)):
-            (s, p) = kstest(stacked_weights[:,i], 'norm', (means[i], std[i]))
-            moving_average = (moving_average * i + p)/(i+1)
-        return {'ks_test':moving_average}
+        ps = [kstest(stacked_weights[:,i], 'norm', (means[i], std[i])) for i in range(len(means))]
+        return {'ks_test':ps}
 
     def skew(self,algorithm):
         client_weights = [cl.get_weights() for cl in algorithm.clients]
@@ -178,7 +175,7 @@ def _accuracy(model, dataloader, device):
         output = model.predict(data, device = device)
         output_labels = torch.argmax(output[0], axis = -1).to('cpu')
         acc += torch.sum(output_labels == target)
-    return acc.item() / len(dataloader.dataset)
+    return acc / len(dataloader.dataset)
 
 def _recall(model, dataloader, device):
     target_true = torch.Tensor()
