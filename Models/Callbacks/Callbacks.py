@@ -15,7 +15,7 @@ class Callbacks():
         stacked_weights = torch.stack(client_weights, 0)
         means = torch.mean(stacked_weights, 0)
         std = torch.std(stacked_weights, 0)+0.00001
-        ps = [kstest(stacked_weights[:,i], 'norm', (means[i], std[i])) for i in range(len(means))]
+        ps = [kstest(stacked_weights[:,i], 'norm', (means[i], std[i]))[1] for i in range(len(means))]
         return {'ks_test':ps}
 
     def skew(self,algorithm):
