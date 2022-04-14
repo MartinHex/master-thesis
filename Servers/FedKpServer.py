@@ -9,7 +9,7 @@ import warnings
 class FedKpServer(ProbabilisticServer):
     def __init__(self,model,shrinkage=1,store_distributions = False,cluster_mean=True,
                 bandwidth = 'silverman',lr=1,tau=0.1,b1=.9,b2=0.99,momentum=1,
-                optimizer='none',max_iter=100,bandwidth_scaling=1):
+                optimizer='none',max_iter=100,bandwidth_scaling=1, kernel_type = 'epa'):
 
         super().__init__(model,optimizer = optimizer,lr=lr,tau=tau,b1=b1,b2=b2,momentum=momentum)
         super().__init__(model)
@@ -28,6 +28,8 @@ class FedKpServer(ProbabilisticServer):
             self.bandwidth_method = self._silverman
         if(bandwidth =='scott'):
             self.bandwidth_method = self._scott
+        self.kernel_type = kernel_type
+        assert kernel_type == 'epa' or kernel_type == 'gau', 'Specified kernel is not supported'
 
         # Initiate weights and distribution
         if self.store_distributions:
@@ -164,13 +166,18 @@ class FedKpServer(ProbabilisticServer):
             for _,client_w in enumerate(client_weights):
                 w_i = client_w[self.nonzero_idx].to(device)
                 dif_tmp = (w-w_i)/H
-                dist = dif_tmp**2
-                exp_dist = torch.exp(-dist)
-                denominator += exp_dist
-                numerator += exp_dist*w_i
+                if self.kernel_type == 'epa':
+                    dist = dif_tmp**2
+                    K = 3/4 * (1 - dist)
+                elif self.kernel_type == 'gau':
+                    dist = dif_tmp**2
+                    K = torch.exp(-dist)
+                denominator += K
+                numerator += K*w
             m_x = numerator/(denominator)
             nan_idx = m_x.isnan().nonzero().flatten()
-            m_x[nan_idx] = w[nan_idx]
+            if len(nan_idx) != 0:
+                m_x[nan_idx] = w[nan_idx]
             dif =torch.mean(torch.abs(w-m_x))
             w = torch.clone(m_x)
             i+=1
