@@ -12,6 +12,7 @@ class FedKp(Algorithm):
             momentum=0,
             decay=0,
             dampening=0,
+            kernel_function = 'epanachnikov',
             cluster_mean = True,
             bandwidth = 'silverman',
             server_optimizer='none',
@@ -36,6 +37,7 @@ class FedKp(Algorithm):
 
         server = FedKpServer(Model(),
                             store_distributions = store_distributions,
+                            kernel_function=kernel_function,
                             cluster_mean = cluster_mean,
                             bandwidth=bandwidth,
                             bandwidth_scaling=bandwidth_scaling,

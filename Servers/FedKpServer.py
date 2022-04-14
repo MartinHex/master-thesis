@@ -9,7 +9,7 @@ import warnings
 class FedKpServer(ProbabilisticServer):
     def __init__(self,model,shrinkage=1,store_distributions = False,cluster_mean=True,
                 bandwidth = 'silverman',lr=1,tau=0.1,b1=.9,b2=0.99,momentum=1,
-                optimizer='none',max_iter=100,bandwidth_scaling=1, kernel_type = 'epa'):
+                optimizer='none',max_iter=100,bandwidth_scaling=1, kernel_function = 'gaussian'):
 
         super().__init__(model,optimizer = optimizer,lr=lr,tau=tau,b1=b1,b2=b2,momentum=momentum)
         super().__init__(model)
@@ -28,8 +28,13 @@ class FedKpServer(ProbabilisticServer):
             self.bandwidth_method = self._silverman
         if(bandwidth =='scott'):
             self.bandwidth_method = self._scott
-        self.kernel_type = kernel_type
-        assert kernel_type == 'epa' or kernel_type == 'gau', 'Specified kernel is not supported'
+
+        # Set Kernel function
+        assert kernel_function == 'gaussian' or kernel_function == 'epanachnikov', 'Specified kernel is not supported'
+        if kernel_function=='epanachnikov':
+            self.kernel=self._epanachnikov_kernel
+        elif kernel_function=='gaussian':
+            self.kernel=self._gaussian_kernel
 
         # Initiate weights and distribution
         if self.store_distributions:
@@ -57,8 +62,6 @@ class FedKpServer(ProbabilisticServer):
 
         # Calculate bandwiths
         self.bandwidths = self.bandwidth_method(client_weights,device=device)*self.bandwidth_scaling
-        self.nonzero_idx = self.bandwidths.nonzero().flatten()
-
 
         # Mean shift algorithm:
         if self.cluster_mean:
@@ -155,37 +158,43 @@ class FedKpServer(ProbabilisticServer):
         return res_w
 
     def _mean_shift(self,client_weights,init,tol=1e-6,device=None):
-        w = init[self.nonzero_idx].to(device)
-        H = self.bandwidths[self.nonzero_idx]
-        n_nonzeros = len(w)
-        dif = tol+ 1
+        w_res = init.to(device)
+        non_fixed_idx = self.bandwidths.nonzero().flatten()
         i = 0
-        while (dif>tol) and (i<self.max_iter):
+        for i in range(self.max_iter):
+            # Initiate parameters which are to be mean-shifted
+            w = w_res[non_fixed_idx]
+            H = self.bandwidths[non_fixed_idx]
+            n_nonzeros = len(w)
+            if n_nonzeros==0: break
             denominator= torch.zeros(n_nonzeros).to(device)
             numerator = torch.zeros(n_nonzeros).to(device)
             for _,client_w in enumerate(client_weights):
-                w_i = client_w[self.nonzero_idx].to(device)
-                dif_tmp = (w-w_i)/H
-                if self.kernel_type == 'epa':
-                    dist = dif_tmp**2
-                    K = 3/4 * (1 - dist)
-                elif self.kernel_type == 'gau':
-                    dist = dif_tmp**2
-                    K = torch.exp(-dist)
+                w_i = client_w[non_fixed_idx].to(device)
+                K = self.kernel((w-w_i)/H)
                 denominator += K
-                numerator += K*w
-            m_x = numerator/(denominator)
+                numerator += K*w_i
+            # Calculate the mean shift
+            m_x = numerator/denominator
+            # Replace nan values with previus iteration
             nan_idx = m_x.isnan().nonzero().flatten()
-            if len(nan_idx) != 0:
-                m_x[nan_idx] = w[nan_idx]
-            dif =torch.mean(torch.abs(w-m_x))
-            w = torch.clone(m_x)
-            i+=1
-        if(i>=self.max_iter):
+            m_x[nan_idx] = w[nan_idx]
+            # Update resulting parameters
+            w_res[non_fixed_idx] = m_x
+            # Update which parameters which are to be selected for next iteration
+            non_converged_idx = torch.abs(w-m_x)>tol
+            non_fixed_idx = non_fixed_idx[non_converged_idx]
+        if(i==self.max_iter-1):
             warnings.warn("Maximal iteration reacher. You may want to look into increasing the amount of iterations.")
-        w_res = init
-        w_res[self.nonzero_idx] = w
-        return w_res
+
+        return w_res.to('cpu')
+
+    def _gaussian_kernel(self,u):
+        return torch.exp(-u**2)
+
+    def _epanachnikov_kernel(self,u):
+        u[torch.abs(u)>1] = 1
+        return 3/4 * (1 - u**2)
 
     def _scott(self,client_weights,device=None):
         n = len(client_weights)
@@ -193,7 +202,6 @@ class FedKpServer(ProbabilisticServer):
         d = len(client_weights[0])
 
         return n**(-1/(d+4))*sig
-
 
     def _silverman(self,client_weights,device=None):
         n = len(client_weights)

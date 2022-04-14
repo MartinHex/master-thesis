@@ -15,6 +15,7 @@ class FedKpPa(Algorithm):
             decay=0,
             dampening=0,
             cluster_mean = True,
+            kernel_function = 'epanachnikov',
             bandwidth = 'silverman',
             server_optimizer='none',
             server_lr=1,
@@ -51,6 +52,7 @@ class FedKpPa(Algorithm):
                                     dampening=dampening)
         server = FedKpServer(Model(),
                             store_distributions = store_distributions,
+                            kernel_function = kernel_function,
                             cluster_mean = cluster_mean,
                             bandwidth=bandwidth,
                             optimizer=server_optimizer,
