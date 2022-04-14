@@ -175,7 +175,7 @@ def _accuracy(model, dataloader, device):
         output = model.predict(data, device = device)
         output_labels = torch.argmax(output[0], axis = -1).to('cpu')
         acc += torch.sum(output_labels == target)
-    return acc / len(dataloader.dataset)
+    return acc.item() / len(dataloader.dataset)
 
 def _recall(model, dataloader, device):
     target_true = torch.Tensor()
