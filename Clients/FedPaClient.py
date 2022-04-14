@@ -106,11 +106,10 @@ class FedPaClient(Base_Client):
                 dot_vk_uk_ta.append(dot_vn_un)
 
                 # Compute weights delta tilde: `weights_delta_tilde += coeff * vn / n`.
-                weight_delta_tilde_flat = dict()
                 dot_wd_un = 0
                 for key in weights_delta_tilde:
-                    weight_delta_tilde_flat[key] = weights_delta_tilde[key].flatten()
-                    dot_wd_un += torch.dot(weight_delta_tilde_flat[key], un_flat[key])
+                    weight_delta_tilde_flat = weights_delta_tilde[key].flatten()
+                    dot_wd_un += torch.dot(weight_delta_tilde_flat, un_flat[key])
                 gamma = rho * (n - 1) / n
                 vn_coeff = 1. - gamma * (n * dot_wd_un + dot_vn_un) / (1. + gamma * dot_vn_un)
                 for key in weights_delta_tilde:
@@ -130,10 +129,13 @@ class FedPaClient(Base_Client):
     def _produce_iasg_sample(self, device):
         sample_weight = dict()
         for i, weight in enumerate(self.model.iter_train_model(self.dataloader,self.optimizer, device = device)):
+            # if i > 2: #Remove 30% as burn in
             for key in weight:
+                # if (i == 3):
                 if (i == 0):
                     sample_weight[key] = weight[key]
                 else:
+                    # sample_weight[key] = weight[key].add(sample_weight[key], alpha = (i - 3)).div(((i - 3) + 1))
                     sample_weight[key] = weight[key].add(sample_weight[key], alpha = i).div((i + 1))
         return sample_weight
 
