@@ -129,13 +129,10 @@ class FedPaClient(Base_Client):
     def _produce_iasg_sample(self, device):
         sample_weight = dict()
         for i, weight in enumerate(self.model.iter_train_model(self.dataloader,self.optimizer, device = device)):
-            # if i > 2: #Remove 30% as burn in
             for key in weight:
-                # if (i == 3):
                 if (i == 0):
                     sample_weight[key] = weight[key]
                 else:
-                    # sample_weight[key] = weight[key].add(sample_weight[key], alpha = (i - 3)).div(((i - 3) + 1))
                     sample_weight[key] = weight[key].add(sample_weight[key], alpha = i).div((i + 1))
         return sample_weight
 
