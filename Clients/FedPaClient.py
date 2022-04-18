@@ -64,6 +64,16 @@ class FedPaClient(Base_Client):
                 vk_tas[key].append(vn_flat[key])
             dot_vk_uk_ta = [dot_vn_un]
 
+            # Compute weights delta tilde: `weights_delta_tilde += coeff * vn / n`.
+            dot_wd_un = 0
+            for key in weights_delta_tilde:
+                weight_delta_tilde_flat = weights_delta_tilde[key].flatten()
+                dot_wd_un += torch.dot(weight_delta_tilde_flat, un_flat[key])
+            gamma = rho * (2 - 1) / 2
+            vn_coeff = 1. - gamma * (2 * dot_wd_un + dot_vn_un) / (1. + gamma * dot_vn_un)
+            for key in weights_delta_tilde:
+                weights_delta_tilde[key] = weights_delta_tilde[key] + vn_coeff * torch.reshape(vn_flat[key], weights_delta_tilde[key].shape) / 2
+
             # Iterate through all other samples, excluding samples 1 and 2
             for n, sample in enumerate(samples[2:], 3):
                 # Update the running mean of the weights samples.
