@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import random
 from tqdm import tqdm
 import warnings
+from sklearn.neighbors import KernelDensity
+from sklearn.model_selection import GridSearchCV
+from KDEpy.bw_selection import improved_sheather_jones
 
 class FedKpServer(ProbabilisticServer):
     def __init__(self,model,shrinkage=1,store_distributions = False,cluster_mean=True,
@@ -24,10 +27,21 @@ class FedKpServer(ProbabilisticServer):
         self.cluster_mean = cluster_mean
         self.bandwidth_scaling = bandwidth_scaling
         # Set bandwidth function
-        if(bandwidth =='silverman'):
-            self.bandwidth_method = self._silverman
-        if(bandwidth =='scott'):
+        self.bandwidths=None
+        if(bandwidth =='plugin'):
+            self.bandwidth_method = self._plugin
+        elif(bandwidth=='crossval'):
+            self.bandwidth_method = self._crossval
+        elif(bandwidth=='local'):
+            self.bandwidth_method = self._neirestneighbour
+            self.nneigh = 5
+        elif(bandwidth =='scott'):
             self.bandwidth_method = self._scott
+        else:
+            self.bandwidth_method = self._silverman
+
+        # Set if adaptive bandwidth or not
+        self.adaptive = (bandwidth=='local')
 
         # Set Kernel function
         assert kernel_function == 'gaussian' or kernel_function == 'epanachnikov', 'Specified kernel is not supported'
@@ -59,9 +73,6 @@ class FedKpServer(ProbabilisticServer):
                 self.stats[i] = [torch.min(x),torch.max(x),torch.mean(x),torch.std(x)]
                 self.prior[i] = self.likelihood[i]
                 self.likelihood[i] = gaussian_kde(x,bw_method='silverman')
-
-        # Calculate bandwiths
-        self.bandwidths = self.bandwidth_method(client_weights,device=device)*self.bandwidth_scaling
 
         # Mean shift algorithm:
         if self.cluster_mean:
@@ -159,14 +170,18 @@ class FedKpServer(ProbabilisticServer):
 
     def _mean_shift(self,client_weights,init,tol=1e-6,device=None):
         w_res = init.to(device)
-        non_fixed_idx = self.bandwidths.nonzero().flatten()
-        i = 0
+        if not self.adaptive: self._calc_bandwidth(client_weights)
+        non_fixed_idx = torch.std(client_weights,0).nonzero().flatten()
         for i in range(self.max_iter):
             # Initiate parameters which are to be mean-shifted
             w = w_res[non_fixed_idx]
-            H = self.bandwidths[non_fixed_idx]
             n_nonzeros = len(w)
             if n_nonzeros==0: break
+            if self.adaptive:
+                client_w_tmp = client_weights[:,non_fixed_idx]
+                H = self._local_bandwidth(client_w_tmp,x_0=w,device=device)*self.bandwidth_scaling
+            else:
+                H = self.bandwidths[non_fixed_idx]*self.bandwidth_scaling
             denominator= torch.zeros(n_nonzeros).to(device)
             numerator = torch.zeros(n_nonzeros).to(device)
             for _,client_w in enumerate(client_weights):
@@ -190,22 +205,51 @@ class FedKpServer(ProbabilisticServer):
         return w_res.to('cpu')
 
     def _gaussian_kernel(self,u):
-        return torch.exp(-u**2)
+        return torch.exp(-u**2/2)
 
     def _epanachnikov_kernel(self,u):
         u[torch.abs(u)>1] = 1
         return 3/4 * (1 - u**2)
 
-    def _scott(self,client_weights,device=None):
-        n = len(client_weights)
-        sig = torch.nan_to_num(torch.std(client_weights,0).to(device))
-        d = len(client_weights[0])
+    def _calc_bandwidth(self,client_weights,device=None):
+        bandwidths = []
+        for x in tqdm(client_weights.transpose(0,1)):
+            h = self.bandwidth_method(x) if torch.std(x)!=0 else 0
+            bandwidths.append(h)
+        self.bandwidths = torch.Tensor(bandwidths).to(device)
 
-        return n**(-1/(d+4))*sig
+    def _local_bandwidth(self,client_weights,x_0=None,device=None):
+        bandwidths = []
+        for i,x in tqdm(enumerate(client_weights.transpose(0,1))):
+            h = self.bandwidth_method(x,x_0[i]) if torch.std(x)!=0 else 0
+            bandwidths.append(h)
+        return torch.Tensor(bandwidths).to(device)
 
-    def _silverman(self,client_weights,device=None):
-        n = len(client_weights)
-        sig = torch.nan_to_num(torch.std(client_weights,0).to(device))
-        d = len(client_weights[0])
+    def _scott(self,x):
+        n = len(x)
+        sig = torch.std(x)
+        iqr = torch.quantile(x,0.75)-torch.quantile(x,0.5)
 
-        return (4/(d+2))**(1/(d+4))*n**(-1/(d+4))*sig
+        return n**(-0.2)*torch.min(sig,iqr)
+
+    def _silverman(self,x):
+        n = len(x)
+        sig = torch.std(x)
+        iqr = torch.quantile(x,0.75)-torch.quantile(x,0.5)
+
+        return (n*3/4)**(-1/5)*torch.min(sig,iqr)
+
+    def _plugin(self,x):
+        return improved_sheather_jones(x.reshape(len(x),1).numpy())
+
+    def _crossval(self,x):
+        bandwidths = (torch.std(x)*torch.logspace(0.01, 10, 4)).tolist()
+        grid = GridSearchCV(KernelDensity(),
+                            {'bandwidth': bandwidths},
+                            cv=5)
+        grid.fit(x.reshape(-1, 1))
+        return bandwidths[grid.best_index_]
+
+    def _neirestneighbour(self,x,x_0):
+        se,_ = torch.sort((x_0-x)**2)
+        return self.nneigh**(-0.2)*torch.mean(se[:self.nneigh])
