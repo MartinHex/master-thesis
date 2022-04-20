@@ -3,7 +3,6 @@ import torch
 from scipy.stats import gaussian_kde
 import matplotlib.pyplot as plt
 import random
-from tqdm import tqdm
 import warnings
 from sklearn.neighbors import KernelDensity
 from sklearn.model_selection import GridSearchCV
@@ -159,15 +158,6 @@ class FedKpServer(ProbabilisticServer):
         ax.plot(t_max,ker(t_max),'.',c='red',markersize=10)
         ax.plot([mean_x,mean_x],ax.get_ylim(),'--',c='black')
 
-    def _cov_adj_client_weights(self, client_weights,device=None):
-        mean_w = torch.mean(client_weights,0)
-        res_w = [mean_w.detach() for i in range(len(client_weights))]
-        for i,w_0 in enumerate(tqdm(client_weights)):
-            w = [cw for j,cw in enumerate(client_weights) if j!=i]
-            cov_adj_w = self._cov_adj_weight(w,w_0,device=device)
-            res_w[i] = res_w[i].add(cov_adj_w)
-        return res_w
-
     def _mean_shift(self,client_weights,init,tol=1e-6,device=None):
         w_res = init.to(device)
         if not self.adaptive: self._calc_bandwidth(client_weights)
@@ -213,14 +203,14 @@ class FedKpServer(ProbabilisticServer):
 
     def _calc_bandwidth(self,client_weights,device=None):
         bandwidths = []
-        for x in tqdm(client_weights.transpose(0,1)):
+        for x in client_weights.transpose(0,1):
             h = self.bandwidth_method(x) if torch.std(x)!=0 else 0
             bandwidths.append(h)
         self.bandwidths = torch.Tensor(bandwidths).to(device)
 
     def _local_bandwidth(self,client_weights,x_0=None,device=None):
         bandwidths = []
-        for i,x in tqdm(enumerate(client_weights.transpose(0,1))):
+        for i,x in enumerate(client_weights.transpose(0,1)):
             h = self.bandwidth_method(x,x_0[i]) if torch.std(x)!=0 else 0
             bandwidths.append(h)
         return torch.Tensor(bandwidths).to(device)
