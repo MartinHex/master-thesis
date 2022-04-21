@@ -230,7 +230,11 @@ class FedKpServer(ProbabilisticServer):
         return (n*3/4)**(-1/5)*torch.min(sig,iqr)
 
     def _plugin(self,x):
-        return improved_sheather_jones(x.reshape(len(x),1).numpy())
+        try:
+            h = improved_sheather_jones(x.reshape(len(x),1).numpy())
+        except:
+            h = self._scott(x)
+        return h
 
     def _crossval(self,x):
         bandwidths = (torch.std(x)*torch.logspace(0.01, 10, 4)).tolist()
