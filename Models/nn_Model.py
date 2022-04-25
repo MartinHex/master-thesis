@@ -80,12 +80,12 @@ class nn_Model(nn.Module):
                 output = self(b_x)[0]
                 loss = loss_func(output, b_y)
                 # clear gradients for this training step
-                optimizer.zero_grad()
                 clip_grad_norm_(self.parameters(),1)
                 # backpropagation, compute gradients
                 loss.backward()
                 # apply gradients
                 optimizer.step()
+                optimizer.zero_grad()
         if (device!= None):
             self.to('cpu')
             torch.cuda.empty_cache()
@@ -116,12 +116,12 @@ class nn_Model(nn.Module):
                 output = self(b_x)[0]
                 loss = loss_func(output, b_y)
                 # clear gradients for this training step
-                optimizer.zero_grad()
                 clip_grad_norm_(self.parameters(),1)
                 # backpropagation, compute gradients
                 loss.backward()
                 # apply gradients
                 optimizer.step()
+                optimizer.zero_grad()
                 yield self.get_weights()
         if (device!= None):
             self.to('cpu')
