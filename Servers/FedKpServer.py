@@ -213,7 +213,7 @@ class FedKpServer(ProbabilisticServer):
 
     def _plugin(self,client_weights):
         bandwidths = []
-        n = len(client_weights[0])
+        n = len(client_weights)
         for x in client_weights.transpose(0,1):
             try:
                 h = improved_sheather_jones(x.reshape(len(x),1).numpy())
@@ -227,7 +227,7 @@ class FedKpServer(ProbabilisticServer):
 
     def _crossval(self,client_weights):
         bandwidths = []
-        n = len(client_weights[0])
+        n = len(client_weights)
         for x in client_weights.transpose(0,1):
             bandwidths = (torch.std(x)*torch.logspace(0.01, 10, 4)).tolist()
             grid = GridSearchCV(KernelDensity(),

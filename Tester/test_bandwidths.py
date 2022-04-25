@@ -12,10 +12,13 @@ from collections import defaultdict
 from tqdm import tqdm
 import os
 import json
+from random import sample
 
 # Parameters
+cluster_mean = False
 alpha=0.1
-number_of_clients = 400
+number_of_clients = 250
+clients_per_round = 50
 bandwidth_methods = ['silverman','local','scott','plugin','crossval']
 batch_size = 16
 hs = torch.logspace(-2,1,20)
@@ -24,8 +27,8 @@ out_path = os.path.join('data','Results','MNIST_bandwidth_evaluation_clustring')
 log_path = os.path.join(out_path,'logs')
 plot_path = os.path.join(out_path,'plots')
 if not os.path.exists(out_path): os.mkdir(out_path)
-if not os.path.exists(out_path): os.mkdir(log_path)
-if not os.path.exists(out_path): os.mkdir(plot_path)
+if not os.path.exists(log_path): os.mkdir(log_path)
+if not os.path.exists(plot_path): os.mkdir(plot_path)
 
 # Variables
 dataloader = Dataloader(number_of_clients,alpha=alpha)
@@ -50,16 +53,28 @@ def server_loss(server,dataloader,device):
     test_loss = np.sum(test_loss)
     return test_loss
 
+def train_loss(server,clients,device):
+    res = [0]*len(clients)
+    for i,client in enumerate(clients):
+        res[i] = server_accuracy(server,client.dataloader,device)
+    return res
+
+def train_acc(server,clients,device):
+    res = [0]*len(clients)
+    for i,client in enumerate(clients):
+        res[i] = server_loss(server,client.dataloader,device)
+    return res
+
 
 res = {}
 for bandwidth_selection in bandwidth_methods:
-    fedKp = FedKpServer(Model(),cluster_mean=False,bandwidth=bandwidth_selection)
+    fedKp = FedKpServer(Model(),cluster_mean=cluster_mean,bandwidth=bandwidth_selection)
     res = defaultdict(list)
     for i in range(cv):
         print('------------------- Round %i --------------------------'%i)
         print('setting up initial model')
         init_Model = Model()
-        clients = [Client(Model(),dl) for dl in train_dls[:20]]
+        clients = [Client(Model(),dl) for dl in sample(train_dls,clients_per_round)]
         # train Clients
         print('Training clients')
         for client in tqdm(clients):
@@ -68,22 +83,28 @@ for bandwidth_selection in bandwidth_methods:
 
         print('Evaluating FedAvg')
         fedAvg.aggregate(clients)
-        fedAvg_acc = server_accuracy(fedAvg,test_data,device)
-        fedAvg_loss = server_loss(fedAvg,test_data,device)
-        res['fedAvg_acc'].append(fedAvg_acc)
-        res['fedAvg_loss'].append(fedAvg_loss)
+        res['fedAvg_acc'].append(server_accuracy(fedAvg,test_data,device))
+        res['fedAvg_loss'].append(server_loss(fedAvg,test_data,device))
+        res['fedAvg_train_acc'].append(train_loss(fedAvg,clients,device))
+        res['fedAvg_train_loss'].append(train_acc(fedAvg,clients,device))
 
         print('Testing FedKp')
         kp_losses = []
         kp_accuracies = []
+        kp_train_loss = []
+        kp_train_acc = []
         for h in tqdm(hs):
             fedKp.bandwidth_scaling=h
             fedKp.aggregate(clients)
             kp_accuracies.append(server_accuracy(fedKp,test_data,device))
             kp_losses.append(server_loss(fedKp,test_data,device))
+            kp_train_acc.append(train_acc(fedKp,clients,device))
+            kp_train_loss.append(train_loss(fedKp,clients,device))
 
-        res['fedKp_losses'].append(kp_losses)
-        res['fedKp_accuracies'].append(kp_accuracies)
+        res['fedKp_loss'].append(kp_losses)
+        res['fedKp_acc'].append(kp_accuracies)
+        res['fedKp_train_loss'].append(kp_losses)
+        res['fedKp_train_acc'].append(kp_accuracies)
 
     with open(os.path.join(log_path,bandwidth_selection+'.json'),'w') as f:
         json.dump(res,f)
@@ -91,8 +112,7 @@ for bandwidth_selection in bandwidth_methods:
 ############################# Plotting ##############################
 #Load file
 for json_file in  os.listdir(log_path):
-    if json_file.split('.')[-1]!='json': continue
-    with open(os.path.join(out_path,json_file),'r') as f:
+    with open(os.path.join(log_path,json_file),'r') as f:
         res = json.load(f)
     name = json_file.split('.')[0]
     # Plot losses
