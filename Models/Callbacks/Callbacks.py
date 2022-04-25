@@ -1,5 +1,5 @@
 import torch
-from sklearn.metrics import f1_score, recall_score, precision_score
+from sklearn.metrics import f1_score, recall_score, precision_score, confusion_matrix
 from collections import defaultdict
 from scipy.stats import kurtosis, skew, kstest
 import numpy as np
@@ -9,6 +9,34 @@ class Callbacks():
         self.dataloader = dataloader
         self.verbose = verbose
         self.device = device
+
+    def confusion_metrics(self, algorithm):
+        tp = []
+        fp = []
+        fn = []
+        tn = []
+        for i, (data, target) in enumerate(self.dataloader):
+            output = algorithm.server.model.predict(data, device = self.device)
+            labels = output[0].shape[-1]
+            output_labels = torch.argmax(output[0], axis = -1).to('cpu')
+            matrix = confusion_matrix(target, output_labels, labels = np.arange(labels))
+            for label in range(labels):
+                label_tp = matrix[label, label]
+                label_fp = np.sum(matrix[:, label]) - label_tp
+                label_fn = np.sum(matrix[label, :]) - label_tp
+                label_tn = len(target) - (label_tp + label_fp + label_fn)
+                if i == 0:
+                    tp.append(label_tp)
+                    fp.append(label_fp)
+                    fn.append(label_fn)
+                    tn.append(label_tn)
+                else:
+                    tp[label] += label_tp
+                    fp[label] += label_fp
+                    fn[label] += label_fn
+                    tn[label] += label_tn
+        return {'tp': tp, 'tn': tn, 'fp': fp, 'fn': fn}
+
 
     def ks_test(self, algorithm):
         client_weights = [_model_weight_to_array(c.get_weights()) for c in algorithm.clients]
