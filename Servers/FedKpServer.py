@@ -40,7 +40,7 @@ class FedKpServer(ProbabilisticServer):
             self.bandwidth_method = self._silverman
 
         # Set if adaptive bandwidth or not
-        self.adaptive = (bandwidth=='local')
+        self.adaptive = (bandwidth in ['local'])
 
         # Set Kernel function
         assert kernel_function == 'gaussian' or kernel_function == 'epanachnikov', 'Specified kernel is not supported'
@@ -63,7 +63,6 @@ class FedKpServer(ProbabilisticServer):
         # List and translate data into numpy matrix
         client_weights = [self._model_weight_to_array(c.get_weights()) for c in clients]
         client_weights = torch.stack(client_weights).to(device)
-        print('Aggregating Models.')
 
         # Kernel Esstimation
         if self.store_distributions:
@@ -160,7 +159,7 @@ class FedKpServer(ProbabilisticServer):
 
     def _mean_shift(self,client_weights,init,tol=1e-6,device=None):
         w_res = init.to(device)
-        if not self.adaptive: self._calc_bandwidth(client_weights)
+        if not self.adaptive: self.bandwidths = self.bandwidth_method(client_weights)*self.bandwidth_scaling
         non_fixed_idx = torch.std(client_weights,0).nonzero().flatten()
         for i in range(self.max_iter):
             # Initiate parameters which are to be mean-shifted
@@ -169,7 +168,7 @@ class FedKpServer(ProbabilisticServer):
             if n_nonzeros==0: break
             if self.adaptive:
                 client_w_tmp = client_weights[:,non_fixed_idx]
-                H = self._local_bandwidth(client_w_tmp,x_0=w,device=device)*self.bandwidth_scaling
+                H = self.bandwidth_method(client_w_tmp,x_0=w)*self.bandwidth_scaling
             else:
                 H = self.bandwidths[non_fixed_idx]*self.bandwidth_scaling
             denominator= torch.zeros(n_nonzeros).to(device)
@@ -191,8 +190,7 @@ class FedKpServer(ProbabilisticServer):
             non_fixed_idx = non_fixed_idx[non_converged_idx]
         if(i==self.max_iter-1):
             warnings.warn("Maximal iteration reacher. You may want to look into increasing the amount of iterations.")
-
-        return w_res.to('cpu')
+        return w_res
 
     def _gaussian_kernel(self,u):
         return torch.exp(-u**2/2)
@@ -201,49 +199,45 @@ class FedKpServer(ProbabilisticServer):
         u[torch.abs(u)>1] = 1
         return 3/4 * (1 - u**2)
 
-    def _calc_bandwidth(self,client_weights,device=None):
-        bandwidths = []
-        for x in client_weights.transpose(0,1):
-            h = self.bandwidth_method(x) if torch.std(x)!=0 else 0
-            bandwidths.append(h)
-        self.bandwidths = torch.Tensor(bandwidths).to(device)
+    def _scott(self,client_weights):
+        n = len(client_weights)
+        h = torch.std(client_weights,0)
+        return n**(-0.2)*h
 
-    def _local_bandwidth(self,client_weights,x_0=None,device=None):
+    def _silverman(self,client_weights):
+        n = len(client_weights)
+        h = torch.std(client_weights,0)
+        iqr = torch.quantile(client_weights,0.75,dim=0)-torch.quantile(client_weights,0.25,dim=0)
+        h[h>iqr] = iqr[h>iqr]
+        return (n*3/4)**(-0.2)*h
+
+    def _plugin(self,client_weights):
         bandwidths = []
-        for i,x in enumerate(client_weights.transpose(0,1)):
-            h = self.bandwidth_method(x,x_0[i]) if torch.std(x)!=0 else 0
+        n = len(client_weights)
+        for x in client_weights.transpose(0,1):
+            try:
+                h = improved_sheather_jones(x.reshape(len(x),1).numpy())
+            except:
+                std = torch.std(client_weights,0)
+                iqr = torch.quantile(client_weights,0.75,dim=0)-torch.quantile(client_weights,0.25,dim=0)
+                h = n**(-0.2)*min(iqr,std)
+            h = self.bandwidth_method(x) if torch.std(x)!=0 else 0
             bandwidths.append(h)
         return torch.Tensor(bandwidths).to(device)
 
-    def _scott(self,x):
-        n = len(x)
-        sig = torch.std(x)
-        iqr = torch.quantile(x,0.75)-torch.quantile(x,0.5)
+    def _crossval(self,client_weights):
+        bandwidths = []
+        n = len(client_weights)
+        for x in client_weights.transpose(0,1):
+            bandwidths = (torch.std(x)*torch.logspace(0.01, 10, 4)).tolist()
+            grid = GridSearchCV(KernelDensity(),
+                                {'bandwidth': bandwidths},
+                                cv=5)
+            grid.fit(x.reshape(-1, 1))
+            h =  bandwidths[grid.best_index_]
+            bandwidths.append(h)
+        return torch.Tensor(bandwidths).to(device)
 
-        return n**(-0.2)*torch.min(sig,iqr)
-
-    def _silverman(self,x):
-        n = len(x)
-        sig = torch.std(x)
-        iqr = torch.quantile(x,0.75)-torch.quantile(x,0.5)
-
-        return (n*3/4)**(-1/5)*torch.min(sig,iqr)
-
-    def _plugin(self,x):
-        try:
-            h = improved_sheather_jones(x.reshape(len(x),1).numpy())
-        except:
-            h = self._scott(x)
-        return h
-
-    def _crossval(self,x):
-        bandwidths = (torch.std(x)*torch.logspace(0.01, 10, 4)).tolist()
-        grid = GridSearchCV(KernelDensity(),
-                            {'bandwidth': bandwidths},
-                            cv=5)
-        grid.fit(x.reshape(-1, 1))
-        return bandwidths[grid.best_index_]
-
-    def _neirestneighbour(self,x,x_0):
-        se,_ = torch.sort((x_0-x)**2)
-        return self.nneigh**(-0.2)*torch.mean(se[:self.nneigh])
+    def _neirestneighbour(self,client_weights,x_0):
+        se,_ = torch.sort((x_0-client_weights)**2,0)
+        return self.nneigh**(-0.2)*torch.mean(se[:,:self.nneigh])
