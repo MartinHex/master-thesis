@@ -10,32 +10,16 @@ class Callbacks():
         self.verbose = verbose
         self.device = device
 
-    def confusion_metrics(self, algorithm):
-        tp = []
-        fp = []
-        fn = []
-        tn = []
-        for i, (data, target) in enumerate(self.dataloader):
-            output = algorithm.server.model.predict(data, device = self.device)
-            labels = output[0].shape[-1]
-            output_labels = torch.argmax(output[0], axis = -1).to('cpu')
-            matrix = confusion_matrix(target, output_labels, labels = np.arange(labels))
-            for label in range(labels):
-                label_tp = matrix[label, label]
-                label_fp = np.sum(matrix[:, label]) - label_tp
-                label_fn = np.sum(matrix[label, :]) - label_tp
-                label_tn = len(target) - (label_tp + label_fp + label_fn)
-                if i == 0:
-                    tp.append(label_tp)
-                    fp.append(label_fp)
-                    fn.append(label_fn)
-                    tn.append(label_tn)
-                else:
-                    tp[label] += label_tp
-                    fp[label] += label_fp
-                    fn[label] += label_fn
-                    tn[label] += label_tn
-        return {'tp': tp, 'tn': tn, 'fp': fp, 'fn': fn}
+    def server_accrecprec(self, algorithm):
+        (tp, tn, fp, fn) = _confusion_matrix(algorithm.server.model, self.dataloader, self.device)
+        acc = tp / (tp + fp + tn + fn)
+        rec = tp / (tp + fn)
+        prec = tp / (tp + fp)
+        if self.verbose:
+            print("Server val accuracy: {:.2f}".format(acc))
+            print("Server val recall: {:.2f}".format(rec))
+            print("Server val precision: {:.2f}".format(prec))
+        return {'server_accuracy': acc, 'server_recall': rec, 'server_precision': prec}
 
 
     def ks_test(self, algorithm):
@@ -183,6 +167,26 @@ class Callbacks():
                 print("Server Model on sampled Client {} training accuracy: {:.3f}".format(i+1,accuracy))
         return {'server_training_accuracy':client_accuracies}
 
+    def server_training_accrecprec(self, algorithm):
+        client_accuracies = []
+        client_recall = []
+        client_precision = []
+        model = algorithm.server.model
+        model.eval()
+        for i, client in enumerate(algorithm.clients):
+            (tp, tn, fp, fn) = _confusion_matrix(model, client.dataloader, self.device)
+            acc = tp / (tp + fp + tn + fn)
+            rec = tp / (tp + fn)
+            prec = tp / (tp + fp)
+            client_accuracies.append(acc)
+            client_recall.append(rec)
+            client_precision.append(prec)
+            if self.verbose:
+                print("Server Model on sampled Client {} training accuracy: {:.3f}".format(i+1,acc))
+                print("Server Model on sampled Client {} training recall: {:.3f}".format(i+1,rec))
+                print("Server Model on sampled Client {} training precision: {:.3f}".format(i+1,prec))
+        return {'server_training_accuracy':client_accuracies, 'server_training_recall': client_recall, 'server_training_precision': client_precision}
+
     def client_training_accuracy(self, algorithm):
         client_accuracies = []
         for i, client in enumerate(algorithm.clients):
@@ -192,6 +196,20 @@ class Callbacks():
             if self.verbose:
                 print("Sampled Client {} training accuracy: {:.3f}".format(i+1,accuracy))
         return {'client_training_accuracy':client_accuracies}
+
+def _confusion_matrix(model, dataloader, device):
+    tp = fp = fn = tn = 0
+    for i, (data, target) in enumerate(dataloader):
+        output = model.predict(data, device = device)
+        labels = output[0].shape[-1]
+        output_labels = torch.argmax(output[0], axis = -1).to('cpu')
+        matrix = confusion_matrix(target, output_labels, labels = np.arange(labels))
+        for label in range(labels):
+            tp += matrix[label, label]
+            fp += np.sum(matrix[:, label]) - matrix[label, label]
+            fn += np.sum(matrix[label, :]) - matrix[label, label]
+            tn += len(target) - (np.sum(matrix[:, label]) + np.sum(matrix[label, :]) - matrix[label, label])
+    return (tp, tn, fp, fn)
 
 def _model_weight_to_array(w):
     flattened = torch.cat([w[k].flatten() for k in w]).detach()
