@@ -15,78 +15,152 @@ import torch
 import numpy as np
 import os
 
-seed = 1234
+# General parameters
+iterations = 1
+seed = 0
+alpha = 100
+beta = 10
+# Dataloader hyperparameters
+local_epochs = 20
 number_of_clients = 500
 clients_per_round = 20
-batch_size = 20
-alpha = 0.1
-beta = 10
+batch_size = 10
+# Training hyperparameters
+client_lr = 0.01
+server_lr = 0.5
+server_optimizer = 'sgd'
+server_momentum = 0.9
+momentum = 0.9
+shrinkage = 0.01
+burnin = 400
+bandwidth = 'silverman'
+kernel_function = 'epanachnikov'
+
+
 dataloader = Dataloader(number_of_clients,alpha=alpha,beta=beta,seed=seed)
 test_data = dataloader.get_test_dataloader(300)
 device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
 
 # Create callback functions that are run at the end of every round
 print('Creating Callbacks')
-cbs = Callbacks(test_data, device = device, verbose = True)
+cbs = Callbacks(test_data, device = device, verbose = False)
 callbacks = [
     cbs.server_loss,
-    cbs.server_accuracy,
-    cbs.server_training_accuracy,
+    cbs.server_accrecprec,
     cbs.server_training_loss,
-    cbs.client_training_accuracy,
-    cbs.client_training_loss,
+    cbs.server_training_accrecprec,
     ]
 
-# Initiate algorithms with same parameters as in papers.
+print('Creating FedAvg')
+torch.manual_seed(seed)
+np.random.seed(seed)
+fedavg = FedAvg(
+    dataloader=dataloader,
+    Model=Model,
+    clients_per_round = clients_per_round,
+    client_lr = client_lr,
+     momentum = momentum,
+    batch_size=batch_size,
+    server_momentum = server_momentum,
+    server_lr = server_lr,
+    server_optimizer = server_optimizer)
 
 print('Creating FedPA')
-fedpa = FedPa(dataloader=dataloader, Model=Model,
-    clients_per_round = clients_per_round, client_lr = 0.01,
-    shrinkage = 0.01,batch_size=batch_size,burnin=400,
-    server_momentum = 0.9, server_optimizer = 'sgd', server_lr = 0.5)
-
-print('Creating FedAvg')
-fedavg = FedAvg(dataloader=dataloader, Model=Model,
-    clients_per_round = clients_per_round,client_lr = 0.01,
-    batch_size=batch_size, server_momentum = 0.9, server_lr = 0.5,
-    server_optimizer = 'sgd')
+torch.manual_seed(seed)
+np.random.seed(seed)
+fedpa= FedPa(
+    dataloader=dataloader,
+    Model=Model,
+    clients_per_round = clients_per_round,
+    client_lr = client_lr,
+    shrinkage = shrinkage,
+    batch_size=batch_size,
+    burnin=burnin,
+    server_momentum = server_momentum,
+    server_optimizer = server_optimizer,
+    server_lr = server_lr,
+    momentum = momentum)
 
 print('Creating FedKP')
-fedkp_cluster_mean = FedKp(dataloader=dataloader, Model=Model,
-    clients_per_round = clients_per_round, client_lr = 0.01,
-    batch_size=batch_size, server_momentum = 0.9, server_lr = 0.5,
-    server_optimizer = 'sgd',cluster_mean=True,max_iter=100)
+torch.manual_seed(seed)
+np.random.seed(seed)
+fedkp_cluster_mean = FedKp(
+    dataloader=dataloader,
+    Model=Model,
+    clients_per_round = clients_per_round,
+    client_lr = client_lr,
+    momentum = momentum,
+    batch_size=batch_size,
+    server_momentum = server_momentum,
+    server_lr = server_lr,
+    server_optimizer = server_optimizer,
+    cluster_mean=True,
+    kernel_function = kernel_function,
+    bandwidth = bandwidth,)
 
-fedkp = FedKp(dataloader=dataloader, Model=Model,
-    clients_per_round = clients_per_round, client_lr = 0.01,
-    batch_size=batch_size, server_momentum = 0.9, server_lr = 0.5,
-    server_optimizer = 'sgd',cluster_mean=False,max_iter=100)
+torch.manual_seed(seed)
+np.random.seed(seed)
+fedkp = FedKp(
+    dataloader=dataloader,
+    Model=Model,
+    clients_per_round = clients_per_round,
+    client_lr = client_lr,
+    momentum = momentum,
+    batch_size=batch_size,
+    server_momentum = server_momentum,
+    server_lr = server_lr,
+    server_optimizer = server_optimizer,
+    cluster_mean=False,
+    kernel_function = kernel_function,
+    bandwidth = bandwidth,)
 
 print('Creating FedKpPa')
-fedkppa = FedKpPa(dataloader=dataloader, Model=Model,
-    clients_per_round = clients_per_round, client_lr = 0.01,shrinkage = 0.01,
-    batch_size=batch_size, server_momentum = 0.9, server_lr = 0.5,
-    server_optimizer = 'sgd',cluster_mean=False,max_iter=100)
+torch.manual_seed(seed)
+np.random.seed(seed)
+fedkppa = FedKpPa(
+    dataloader=dataloader,
+    Model=Model,
+    clients_per_round = clients_per_round,
+    client_lr = client_lr,
+    shrinkage = shrinkage,
+    momentum = momentum,
+    batch_size=batch_size,
+    server_momentum = server_momentum,
+    server_lr = server_lr,
+    server_optimizer = server_optimizer,
+    cluster_mean=False,
+    kernel_function = kernel_function,
+    bandwidth = bandwidth,
+    burnin=burnin)
 
 print('Creating SGLD')
-fedsgld = SGLD(dataloader=dataloader, Model=Model,
-    clients_per_round = clients_per_round,client_lr = 0.01,
-    batch_size=batch_size, server_momentum = 0.9, server_lr = 0.5,
-    server_optimizer = 'sgd',burn_in=400)
+torch.manual_seed(seed)
+np.random.seed(seed)
+fedsgld = SGLD(
+    dataloader=dataloader,
+    Model=Model,
+    clients_per_round = clients_per_round,
+    client_lr = client_lr,
+    momentum = momentum,
+    batch_size=batch_size,
+    server_momentum = server_momentum,
+    server_lr = server_lr,
+    server_optimizer = server_optimizer,
+    burn_in=burnin)
 
 alghs = {
-    'FedPA':fedpa,
     'FedAvg':fedavg,
+    'FedPa':fedpa,
     'FedKp':fedkp,
     'FedKp_cluster_mean':fedkp_cluster_mean,
     'FedKpPa':fedkppa,
-    'SGLD':fedsgld
+    'SGLD':fedsgld,
 }
 
 print('Setting up save paths')
 test_dir = os.path.join('data/Results/CIFAR100')
 if not os.path.exists(test_dir): os.mkdir(test_dir)
-out_dir = os.path.join(test_dir,'alpha_01_hyper')
+out_dir = os.path.join(test_dir,'alpha_{}'.format(str(alpha).replace('.', '')))
 if not os.path.exists(out_dir): os.mkdir(out_dir)
 model_dir = os.path.join(out_dir,'Models')
 if not os.path.exists(model_dir): os.mkdir(model_dir)
@@ -95,20 +169,29 @@ if not os.path.exists(log_dir): os.mkdir(log_dir)
 
 # Load initial model and save a new initial model if it doesn't exist.
 print('Initializing models')
-initial_model_path = os.path.join(model_dir,'initial_model')
+initial_model_path = os.path.join(test_dir,'initial_model')
 if os.path.exists(initial_model_path):
     initial_model = torch.load(initial_model_path)
 else:
+    torch.manual_seed(seed)
+    np.random.seed(seed)
     initial_model = alghs[list(alghs.keys())[0]].server.get_weights()
     torch.save(initial_model, initial_model_path)
 
-iterations = 1000
 print('Running Algorithms')
 for alg in alghs:
     torch.manual_seed(seed)
     np.random.seed(seed)
     print('Running: {}'.format(alg))
     alghs[alg].server.set_weights(initial_model)
-    alghs[alg].run(iterations, epochs = 10, device = device,callbacks=callbacks,log_callbacks=True, log_dir = log_dir,file_name=alg)
-    out_path = os.path.join(model_dir,'model_%s_iter_%i'%(alg,iterations))
+    alghs[alg].run(
+        iterations,
+        epochs = local_epochs,
+        device = device,
+        callbacks=callbacks,
+        log_callbacks=True,
+        log_dir = log_dir,
+        file_name=alg
+    )
+    out_path = os.path.join(model_dir,'model_%s'%(alg))
     torch.save(alghs[alg].server.get_weights(), out_path)
