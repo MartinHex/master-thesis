@@ -23,7 +23,7 @@ device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
 
 # Create callback functions that are run at the end of every round
 print('Creating Callbacks')
-cbs = Callbacks(test_data, device = device, verbose = True)
+cbs = Callbacks(test_data, device = device, verbose = False)
 callbacks = [
     cbs.server_loss,
     cbs.server_accrecprec,
@@ -47,6 +47,8 @@ local_epochs = 5
 # Initiate algorithms with same parameters as in papers.
 # Set parameters to replicate paper results
 print('Creating FedPA')
+torch.manual_seed(0)
+np.random.seed(0)
 fedpa = FedPa(
         dataloader=dataloader,
         Model=Model,
@@ -63,6 +65,8 @@ fedpa = FedPa(
     )
 
 print('Creating FedAvg')
+torch.manual_seed(0)
+np.random.seed(0)
 fedavg = FedAvg(
         dataloader=dataloader,
         Model=Model,
@@ -77,6 +81,8 @@ fedavg = FedAvg(
     )
 
 print('Creating FedKP')
+torch.manual_seed(0)
+np.random.seed(0)
 fedkp_cluster_mean = FedKp(
         dataloader=dataloader,
         Model=Model,
@@ -94,6 +100,8 @@ fedkp_cluster_mean = FedKp(
         kernel_function = kernel_function,
     )
 
+torch.manual_seed(0)
+np.random.seed(0)
 fedkp = FedKp(
         dataloader=dataloader,
         Model=Model,
@@ -112,6 +120,8 @@ fedkp = FedKp(
     )
 
 print('Creating FedKpPa')
+torch.manual_seed(0)
+np.random.seed(0)
 fedkppa = FedKpPa(
         dataloader=dataloader,
         Model=Model,
@@ -132,6 +142,8 @@ fedkppa = FedKpPa(
     )
 
 print('Creating SGLD')
+torch.manual_seed(0)
+np.random.seed(0)
 fedsgld = SGLD(
         dataloader=dataloader,
         Model=Model,
