@@ -17,13 +17,13 @@ from random import sample
 # Parameters
 cluster_mean = False
 alpha=0.1
-number_of_clients = 250
-clients_per_round = 50
+number_of_clients = 200
+clients_per_round = 20
 bandwidth_methods = ['silverman','local','scott','plugin','crossval']
 batch_size = 16
 hs = torch.logspace(-2,1,20)
 cv = 10
-out_path = os.path.join('data','Results','MNIST_bandwidth_evaluation_clustring')
+out_path = os.path.join('data','Results','MNIST_bandwidth_evaluation2')
 log_path = os.path.join(out_path,'logs')
 plot_path = os.path.join(out_path,'plots')
 if not os.path.exists(out_path): os.mkdir(out_path)
@@ -110,43 +110,34 @@ for bandwidth_selection in bandwidth_methods:
         json.dump(res,f)
 
 ############################# Plotting ##############################
+
+def plot_func(key,name):
+    fedAvg_m = np.array([np.mean(res['fedAvg_%s'%key]) for _ in range(len(hs))])
+    fedAvg_std = np.array([np.std(res['fedAvg_%s'%key]) for _ in range(len(hs))])
+    fedKp_m = np.mean(res['fedKp_%s'%key],0)
+    fedKp_std = np.std(res['fedKp_%s'%key],0)
+    fig, ax = plt.subplots(figsize=(4,4))
+    ax.plot(hs,fedAvg_m,color='blue',label='FedAvg')
+    ax.fill_between(hs,fedAvg_m-fedAvg_std,fedAvg_m+fedAvg_std,color='blue',alpha=0.2)
+    ax.plot(hs,fedKp_m,color='red',label='FedKp')
+    ax.fill_between(hs,fedKp_m-fedKp_std,fedKp_m+fedKp_std,color='red',alpha=0.2)
+    ax.set_title(key)
+    ax.set_xlabel('h')
+    ax.set_ylabel(key)
+    ax.set_xscale('log')
+    ax.legend()
+    out_fldr = os.path.join(plot_path,name)
+    if not os.path.exists(out_fldr): os.mkdir(out_fldr)
+    plt.savefig(os.path.join(out_fldr,'%s.png'%key))
+    plt.show()
+
+keys = ['loss','acc','train_loss','train_acc']
+
 #Load file
 for json_file in  os.listdir(log_path):
     with open(os.path.join(log_path,json_file),'r') as f:
         res = json.load(f)
     name = json_file.split('.')[0]
     # Plot losses
-    fedAvg_m = np.array([np.mean(res['fedAvg_loss']) for _ in range(len(hs))])
-    fedAvg_std = np.array([np.std(res['fedAvg_loss']) for _ in range(len(hs))])
-    fedKp_m = np.mean(res['fedKp_losses'],0)
-    fedKp_std = np.std(res['fedKp_losses'],0)
-    fig, ax = plt.subplots(figsize=(4,4))
-    ax.plot(hs,fedAvg_m,color='blue',label='FedAvg')
-    ax.fill_between(hs,fedAvg_m-fedAvg_std,fedAvg_m+fedAvg_std,color='blue',alpha=0.2)
-    ax.plot(hs,fedKp_m,color='red',label='FedKp')
-    ax.fill_between(hs,fedKp_m-fedKp_std,fedKp_m+fedKp_std,color='red',alpha=0.2)
-    ax.set_title('Server Loss')
-    ax.set_xlabel('h')
-    ax.set_ylabel('Loss')
-    ax.set_xscale('log')
-    ax.legend()
-    plt.savefig(os.path.join(plot_path,name+'_server_loss.png'))
-    plt.show()
-
-    # Plot losses
-    fedAvg_m = np.array([np.mean(res['fedAvg_acc']) for _ in range(len(hs))])
-    fedAvg_std = np.array([np.std(res['fedAvg_acc']) for _ in range(len(hs))])
-    fedKp_m = np.mean(res['fedKp_accuracies'],0)
-    fedKp_std = np.std(res['fedKp_accuracies'],0)
-    fig, ax = plt.subplots(figsize=(4,4))
-    ax.plot(hs,fedAvg_m,color='blue',label='FedAvg')
-    ax.fill_between(hs,fedAvg_m-fedAvg_std,fedAvg_m+fedAvg_std,color='blue',alpha=0.2)
-    ax.plot(hs,fedKp_m,color='red',label='FedKp')
-    ax.fill_between(hs,fedKp_m-fedKp_std,fedKp_m+fedKp_std,color='red',alpha=0.2)
-    ax.set_title('Server Accuracies')
-    ax.set_xlabel('h')
-    ax.set_ylabel('Accuracy')
-    ax.set_xscale('log')
-    ax.legend()
-    plt.savefig(os.path.join(plot_path,name+'_serveraccuracy.png'))
-    plt.show()
+    for key in keys:
+        plot_func(key,name)
