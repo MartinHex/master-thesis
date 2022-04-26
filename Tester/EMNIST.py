@@ -43,12 +43,13 @@ kernel_function = 'epanachnikov'
 alpha = 'inf'
 iterations = 1200
 local_epochs = 5
+seed = 0
 
 # Initiate algorithms with same parameters as in papers.
 # Set parameters to replicate paper results
 print('Creating FedPA')
-torch.manual_seed(0)
-np.random.seed(0)
+torch.manual_seed(seed)
+np.random.seed(seed)
 fedpa = FedPa(
         dataloader=dataloader,
         Model=Model,
@@ -65,8 +66,8 @@ fedpa = FedPa(
     )
 
 print('Creating FedAvg')
-torch.manual_seed(0)
-np.random.seed(0)
+torch.manual_seed(seed)
+np.random.seed(seed)
 fedavg = FedAvg(
         dataloader=dataloader,
         Model=Model,
@@ -81,8 +82,8 @@ fedavg = FedAvg(
     )
 
 print('Creating FedKP')
-torch.manual_seed(0)
-np.random.seed(0)
+torch.manual_seed(seed)
+np.random.seed(seed)
 fedkp_cluster_mean = FedKp(
         dataloader=dataloader,
         Model=Model,
@@ -100,8 +101,8 @@ fedkp_cluster_mean = FedKp(
         kernel_function = kernel_function,
     )
 
-torch.manual_seed(0)
-np.random.seed(0)
+torch.manual_seed(seed)
+np.random.seed(seed)
 fedkp = FedKp(
         dataloader=dataloader,
         Model=Model,
@@ -120,8 +121,8 @@ fedkp = FedKp(
     )
 
 print('Creating FedKpPa')
-torch.manual_seed(0)
-np.random.seed(0)
+torch.manual_seed(seed)
+np.random.seed(seed)
 fedkppa = FedKpPa(
         dataloader=dataloader,
         Model=Model,
@@ -142,8 +143,8 @@ fedkppa = FedKpPa(
     )
 
 print('Creating SGLD')
-torch.manual_seed(0)
-np.random.seed(0)
+torch.manual_seed(seed)
+np.random.seed(seed)
 fedsgld = SGLD(
         dataloader=dataloader,
         Model=Model,
@@ -188,8 +189,8 @@ else:
 
 print('Running Algorithms')
 for alg in alghs:
-    torch.manual_seed(0)
-    np.random.seed(0)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
     print('Running: {}'.format(alg))
     alghs[alg].server.set_weights(initial_model)
     alghs[alg].run(
