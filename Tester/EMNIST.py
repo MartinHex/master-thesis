@@ -38,6 +38,8 @@ client_lr = 0.01
 burn_in = 500
 shrinkage = 0.1
 server_optimizer = 'sgd'
+bandwidth = 'silverman'
+kernel_function = 'epanachnikov'
 alpha = 'inf'
 iterations = 1200
 local_epochs = 5
@@ -88,6 +90,8 @@ fedkp_cluster_mean = FedKp(
         cluster_mean = True,
         max_iter = 100,
         clients_sample_alpha = alpha,
+        bandwidth = bandwidth,
+        kernel_function = kernel_function,
     )
 
 fedkp = FedKp(
@@ -103,6 +107,8 @@ fedkp = FedKp(
         cluster_mean = False,
         max_iter = 100,
         clients_sample_alpha = alpha,
+        bandwidth = bandwidth,
+        kernel_function = kernel_function,
     )
 
 print('Creating FedKpPa')
@@ -121,6 +127,8 @@ fedkppa = FedKpPa(
         max_iter = 100,
         burnin = burn_in,
         clients_sample_alpha = alpha,
+        bandwidth = bandwidth,
+        kernel_function = kernel_function,
     )
 
 print('Creating SGLD')
