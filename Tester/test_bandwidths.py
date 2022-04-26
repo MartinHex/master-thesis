@@ -19,11 +19,11 @@ cluster_mean = False
 alpha=0.1
 number_of_clients = 200
 clients_per_round = 20
-bandwidth_methods = ['silverman','local','scott','plugin','crossval']
+bandwidth_methods = ['silverman','local','scott','plugin','crossval'] 
 batch_size = 16
 hs = torch.logspace(-2,1,20)
-cv = 10
-out_path = os.path.join('data','Results','MNIST_bandwidth_evaluation2')
+cv = 5
+out_path = os.path.join('data','Results','MNIST_bandwidth_evaluation')
 log_path = os.path.join(out_path,'logs')
 plot_path = os.path.join(out_path,'plots')
 if not os.path.exists(out_path): os.mkdir(out_path)

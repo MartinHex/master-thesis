@@ -11,7 +11,7 @@ from KDEpy.bw_selection import improved_sheather_jones
 class FedKpServer(ProbabilisticServer):
     def __init__(self,model,shrinkage=1,store_distributions = False,cluster_mean=True,
                 bandwidth = 'silverman',lr=1,tau=0.1,b1=.9,b2=0.99,momentum=1,
-                optimizer='none',max_iter=100,bandwidth_scaling=1, kernel_function = 'gaussian'):
+                optimizer='none',max_iter=100,bandwidth_scaling=1, kernel_function = 'epanachnikov'):
 
         super().__init__(model,optimizer = optimizer,lr=lr,tau=tau,b1=b1,b2=b2,momentum=momentum)
         super().__init__(model)
@@ -218,25 +218,30 @@ class FedKpServer(ProbabilisticServer):
             try:
                 h = improved_sheather_jones(x.reshape(len(x),1).numpy())
             except:
-                std = torch.std(client_weights,0)
-                iqr = torch.quantile(client_weights,0.75,dim=0)-torch.quantile(client_weights,0.25,dim=0)
+                std = torch.std(x)
+                iqr = torch.quantile(x,0.75)-torch.quantile(x,0.25)
                 h = n**(-0.2)*min(iqr,std)
-            h = self.bandwidth_method(x) if torch.std(x)!=0 else 0
             bandwidths.append(h)
-        return torch.Tensor(bandwidths).to(device)
+        return torch.Tensor(bandwidths)
 
     def _crossval(self,client_weights):
         bandwidths = []
         n = len(client_weights)
         for x in client_weights.transpose(0,1):
-            bandwidths = (torch.std(x)*torch.logspace(0.01, 10, 4)).tolist()
-            grid = GridSearchCV(KernelDensity(),
-                                {'bandwidth': bandwidths},
-                                cv=5)
-            grid.fit(x.reshape(-1, 1))
-            h =  bandwidths[grid.best_index_]
+            try:
+                h_grid = (torch.std(x)*torch.logspace(0.01, 10, 4)).tolist()
+                bandwidths = (torch.std(x)*torch.logspace(0.01, 10, 4)).tolist()
+                grid = GridSearchCV(KernelDensity(),
+                                    {'bandwidth': h_grid},
+                                    cv=5)
+                grid.fit(x.reshape(-1, 1))
+                h =  h_grid[grid.best_index_]
+            except:
+                std = torch.std(x)
+                iqr = torch.quantile(x,0.75)-torch.quantile(x,0.25)
+                h = n**(-0.2)*min(iqr,std)
             bandwidths.append(h)
-        return torch.Tensor(bandwidths).to(device)
+        return torch.Tensor(bandwidths)
 
     def _neirestneighbour(self,client_weights,x_0):
         se,_ = torch.sort((x_0-client_weights)**2,0)
