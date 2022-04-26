@@ -29,9 +29,11 @@ server_momentum = 0.9
 client_momentum = 0.9
 server_lr = 0.5
 client_lr = 0.01
+server_optimizer = 'sgd'
 burn_ins = [600, 500, 400]
 shrinkages = [1, 0.5, 0.1]
 iterations = 1000
+local_epochs = 5
 
 print('Setting up save paths')
 test_dir = os.path.join('data/Results/EMNIST')
@@ -58,15 +60,15 @@ for burn_in in burn_ins:
                 batch_size=batch_size,
                 burnin=burn_in,
                 server_momentum = server_momentum,
-                server_optimizer = 'sgd',
+                server_optimizer = server_optimizer,
                 server_lr = server_lr,
-                momentum = client_lr,
+                momentum = client_momentum,
             )
         torch.manual_seed(0)
         np.random.seed(0)
         fedpa.run(
             iterations,
-            epochs = 5,
+            epochs = local_epochs,
             device = device,
             callbacks = callbacks,
             log_callbacks = True,
