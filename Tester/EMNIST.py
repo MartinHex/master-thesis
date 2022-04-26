@@ -5,12 +5,14 @@ from Models.EMNIST_Model import EMNIST_Model as Model
 from Dataloaders.Emnist62 import EMNIST as Dataloader
 # Import Algorithms
 from Algorithms.FedAvg import FedAvg
-from Algorithms.FedBe import FedBe
+from Algorithms.FedKpPa import FedKpPa
 from Algorithms.FedPa import FedPa
 from Algorithms.FedKp import FedKp
+from Algorithms.SGLD import SGLD
 # Additional imports
 from Models.Callbacks.Callbacks import Callbacks
 import torch
+import numpy as np
 import os
 
 clients_per_round = 100
@@ -24,42 +26,131 @@ print('Creating Callbacks')
 cbs = Callbacks(test_data, device = device, verbose = True)
 callbacks = [
     cbs.server_loss,
-    cbs.server_accuracy,
+    cbs.server_accrecprec,
+    cbs.server_training_loss,
+    cbs.server_training_accrecprec
     ]
+
+server_momentum = 0.9
+client_momentum = 0.9
+server_lr = 0.5
+client_lr = 0.01
+burn_in = 500
+shrinkage = 0.1
+server_optimizer = 'sgd'
+alpha = 'inf'
+iterations = 1200
+local_epochs = 5
 
 # Initiate algorithms with same parameters as in papers.
 # Set parameters to replicate paper results
-print('Creating FedBE')
-fedbe = FedBe(dataloader=dataloader, Model=Model ,client_lr = 0.1,
-    clients_per_round = clients_per_round, batch_size = batch_size,
-    p_validation=0.01)
-
 print('Creating FedPA')
-fedpa = FedPa(dataloader=dataloader, Model=Model,
-    clients_per_round = clients_per_round, client_lr = 0.1,
-    shrinkage = 0.01,batch_size=batch_size,burnin=100)
+fedpa = FedPa(
+        dataloader=dataloader,
+        Model=Model,
+        clients_per_round = clients_per_round,
+        client_lr = client_lr,
+        shrinkage = shrinkage,
+        batch_size = batch_size,
+        burnin = burn_in,
+        server_momentum = server_momentum,
+        server_optimizer = server_optimizer,
+        server_lr = server_lr,
+        momentum = client_momentum,
+        clients_sample_alpha = alpha,
+    )
 
 print('Creating FedAvg')
-fedavg = FedAvg(dataloader=dataloader, Model=Model,
-    clients_per_round = clients_per_round,client_lr = 0.1,
-    batch_size=batch_size)
+fedavg = FedAvg(
+        dataloader=dataloader,
+        Model=Model,
+        clients_per_round = clients_per_round,
+        client_lr = client_lr,
+        batch_size = batch_size,
+        server_momentum = server_momentum,
+        server_optimizer = server_optimizer,
+        server_lr = server_lr,
+        momentum = client_momentum,
+        clients_sample_alpha = alpha,
+    )
 
 print('Creating FedKP')
-fedkp = FedKp(dataloader=dataloader, Model=Model,
-    clients_per_round = clients_per_round, client_lr = 0.1,
-    batch_size = batch_size,cluster_mean=True,max_iter=20)
+fedkp_cluster_mean = FedKp(
+        dataloader=dataloader,
+        Model=Model,
+        clients_per_round = clients_per_round,
+        client_lr = client_lr,
+        batch_size = batch_size,
+        server_momentum = server_momentum,
+        server_optimizer = server_optimizer,
+        server_lr = server_lr,
+        momentum = client_momentum,
+        cluster_mean = True,
+        max_iter = 100,
+        clients_sample_alpha = alpha,
+    )
+
+fedkp = FedKp(
+        dataloader=dataloader,
+        Model=Model,
+        clients_per_round = clients_per_round,
+        client_lr = client_lr,
+        batch_size = batch_size,
+        server_momentum = server_momentum,
+        server_optimizer = server_optimizer,
+        server_lr = server_lr,
+        momentum = client_momentum,
+        cluster_mean = False,
+        max_iter = 100,
+        clients_sample_alpha = alpha,
+    )
+
+print('Creating FedKpPa')
+fedkppa = FedKpPa(
+        dataloader=dataloader,
+        Model=Model,
+        clients_per_round = clients_per_round,
+        client_lr = client_lr,
+        shrinkage = shrinkage,
+        batch_size = batch_size,
+        server_momentum = server_momentum,
+        server_optimizer = server_optimizer,
+        server_lr = server_lr,
+        momentum = client_momentum,
+        cluster_mean = False,
+        max_iter = 100,
+        burnin = burn_in,
+        clients_sample_alpha = alpha,
+    )
+
+print('Creating SGLD')
+fedsgld = SGLD(
+        dataloader=dataloader,
+        Model=Model,
+        clients_per_round = clients_per_round,
+        client_lr = client_lr,
+        batch_size = batch_size,
+        burn_in = burn_in,
+        server_momentum = server_momentum,
+        server_optimizer = server_optimizer,
+        server_lr = server_lr,
+        momentum = client_momentum,
+        clients_sample_alpha = alpha,
+    )
 
 alghs = {
-    'FedAvg_burnin':fedavg,
-    'FedKP':fedkp,
     'FedPA':fedpa,
-    'FedBe':fedbe,
+    'FedAvg':fedavg,
+    'FedKP':fedkp,
+    'FedKP_cluter_mean':fedkp_cluster_mean,
+    'FedKPPA':fedkppa,
+    'SGLD':fedsgld
 }
 
 print('Setting up save paths')
 test_dir = os.path.join('data/Results/EMNIST')
 if not os.path.exists(test_dir): os.mkdir(test_dir)
-out_dir = os.path.join(test_dir,'experiment')
+out_dir = os.path.join(test_dir,'alpha_{}'.format(str(alpha).replace('.', '')))
 if not os.path.exists(out_dir): os.mkdir(out_dir)
 model_dir = os.path.join(out_dir,'Models')
 if not os.path.exists(model_dir): os.mkdir(model_dir)
@@ -75,11 +166,20 @@ else:
     initial_model = alghs[list(alghs.keys())[0]].server.get_weights()
     torch.save(initial_model, initial_model_path)
 
-iterations = 100
 print('Running Algorithms')
 for alg in alghs:
+    torch.manual_seed(0)
+    np.random.seed(0)
     print('Running: {}'.format(alg))
     alghs[alg].server.set_weights(initial_model)
-    alghs[alg].run(iterations, epochs = 5, device = device,callbacks=callbacks,log_callbacks=True, log_dir = log_dir,file_name=alg)
-    out_path = os.path.join(model_dir,'model_%s_iter_%i'%(alg,iterations))
+    alghs[alg].run(
+        iterations,
+        epochs = local_epochs,
+        device = device,
+        callbacks=callbacks,
+        log_callbacks=True,
+        log_dir = log_dir,
+        file_name=alg
+    )
+    out_path = os.path.join(model_dir,'model_%s'%(alg))
     torch.save(alghs[alg].server.get_weights(), out_path)
