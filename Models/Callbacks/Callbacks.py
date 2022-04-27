@@ -177,7 +177,7 @@ class Callbacks():
             client_accuracies.append(accuracy)
             client_recall.append(recall)
             client_precision.append(precision)
-            clinet_loss.append(loss)
+            client_loss.append(loss)
             if self.verbose:
                 print("Server Model on sampled Client {} training accuracy: {:.3f}".format(i+1,accuracy))
                 print("Server Model on sampled Client {} training recall: {:.3f}".format(i+1,recall))
@@ -207,11 +207,12 @@ def _accrecprec(model, dataloader, device):
         loss += loss_function(output, target).item()
         n_labels = output[0].shape[-1]
         output_labels.extend(torch.argmax(output, axis = -1).tolist())
-    matrix = confusion_matrix(targets, output_labels, labels = np.arange(n_labels))
-    true_pos = np.diag(matrix)
-    precision = np.mean(true_pos / np.sum(matrix, axis = 0))
-    recall = np.mean(true_pos / np.sum(matrix, axis = 1))
-    accuracy = np.sum(true_pos) / np.sum(matrix)
+    with np.errstate(divide='ignore',invalid='ignore'):
+        matrix = confusion_matrix(targets, output_labels, labels = np.arange(n_labels))
+        true_pos = np.diag(matrix)
+        precision = np.nanmean(true_pos / np.sum(matrix, axis = 0))
+        recall = np.nanmean(true_pos / np.sum(matrix, axis = 1))
+        accuracy = np.sum(true_pos) / np.sum(matrix)
     return (accuracy, recall, precision, loss)
 
 def _model_weight_to_array(w):
