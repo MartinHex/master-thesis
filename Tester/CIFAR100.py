@@ -18,7 +18,7 @@ import os
 # General parameters
 iterations = 1
 seed = 0
-alpha = 100
+alpha = 10
 beta = 10
 # Dataloader hyperparameters
 local_epochs = 20
@@ -45,10 +45,8 @@ device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
 print('Creating Callbacks')
 cbs = Callbacks(test_data, device = device, verbose = False)
 callbacks = [
-    cbs.server_loss,
-    cbs.server_accrecprec,
-    cbs.server_training_loss,
-    cbs.server_training_accrecprec,
+    cbs.server_thesis_results,
+    cbs.server_training_thesis_results,
     ]
 
 print('Creating FedAvg')
