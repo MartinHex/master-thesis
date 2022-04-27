@@ -10,13 +10,14 @@ class Callbacks():
         self.verbose = verbose
         self.device = device
 
-    def server_accrecprec(self, algorithm):
-        (accuracy, recall, precision) = _accrecprec(algorithm.server.model, self.dataloader, self.device)
+    def server_thesis_results(self, algorithm):
+        (accuracy, recall, precision, loss) = _accrecprec(algorithm.server.model, self.dataloader, self.device)
         if self.verbose:
             print("Server val accuracy: {:.2f}".format(accuracy))
             print("Server val recall: {:.2f}".format(recall))
             print("Server val precision: {:.2f}".format(precision))
-        return {'server_accuracy': accuracy, 'server_recall': recall, 'server_precision': precision}
+            print("Server val loss: {:.2f}".format(loss))
+        return {'server_accuracy': accuracy, 'server_recall': recall, 'server_precision': precision, 'server_loss': loss}
 
 
     def ks_test(self, algorithm):
@@ -164,22 +165,25 @@ class Callbacks():
                 print("Server Model on sampled Client {} training accuracy: {:.3f}".format(i+1,accuracy))
         return {'server_training_accuracy':client_accuracies}
 
-    def server_training_accrecprec(self, algorithm):
+    def server_training_thesis_results(self, algorithm):
         client_accuracies = []
         client_recall = []
         client_precision = []
+        client_loss = []
         model = algorithm.server.model
         model.eval()
         for i, client in enumerate(algorithm.clients):
-            (accuracy, recall, precision) = _accrecprec(model, client.dataloader, self.device)
+            (accuracy, recall, precision, loss) = _accrecprec(model, client.dataloader, self.device)
             client_accuracies.append(accuracy)
             client_recall.append(recall)
             client_precision.append(precision)
+            clinet_loss.append(loss)
             if self.verbose:
                 print("Server Model on sampled Client {} training accuracy: {:.3f}".format(i+1,accuracy))
                 print("Server Model on sampled Client {} training recall: {:.3f}".format(i+1,recall))
                 print("Server Model on sampled Client {} training precision: {:.3f}".format(i+1,precision))
-        return {'server_training_accuracy':client_accuracies, 'server_training_recall': client_recall, 'server_training_precision': client_precision}
+                print("Server Model on sampled Client {} training loss: {:.4f}".format(i+1,loss))
+        return {'server_training_accuracy':client_accuracies, 'server_training_recall': client_recall, 'server_training_precision': client_precision, 'server_training_loss':client_loss}
 
     def client_training_accuracy(self, algorithm):
         client_accuracies = []
@@ -192,20 +196,23 @@ class Callbacks():
         return {'client_training_accuracy':client_accuracies}
 
 def _accrecprec(model, dataloader, device):
+    loss_function = torch.nn.CrossEntropyLoss()
     output_labels = []
     targets = []
+    loss = 0
     for i, (data, target) in enumerate(dataloader):
         targets.extend(target.tolist())
         output = model.predict(data, device = device)
+        output = output[0].cpu()
+        loss += loss_function(output, target).item()
         n_labels = output[0].shape[-1]
-        output_labels.extend(torch.argmax(output[0], axis = -1).to('cpu').tolist())
-
+        output_labels.extend(torch.argmax(output, axis = -1).tolist())
     matrix = confusion_matrix(targets, output_labels, labels = np.arange(n_labels))
     true_pos = np.diag(matrix)
     precision = np.mean(true_pos / np.sum(matrix, axis = 0))
     recall = np.mean(true_pos / np.sum(matrix, axis = 1))
     accuracy = np.sum(true_pos) / np.sum(matrix)
-    return (accuracy, recall, precision)
+    return (accuracy, recall, precision, loss)
 
 def _model_weight_to_array(w):
     flattened = torch.cat([w[k].flatten() for k in w]).detach()
