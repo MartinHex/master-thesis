@@ -35,8 +35,8 @@ plt.style.use('seaborn-whitegrid')
 torch.manual_seed(seed)
 np.random.seed(seed)
 
-fig,axs = plt.subplots(2,2,figsize=(8,8))
-for i,alpha in enumerate(alphas):
+fig,axs = plt.subplots(2,2,figsize=(6,6))
+for i,alpha in enumerate([10,1,0.1,0.01]):
     ax = axs[i//2,i%2]
     dl = Dataloader(n_clients,alpha=alpha)
     for j,c_data in enumerate(dl.get_training_raw_data()):
@@ -213,7 +213,7 @@ plt.savefig(os.path.join(plot_path,'legend.png'))
 
 def plot_func(res,out_path,variable,metric):
     for j,var in enumerate(np.unique(res[variable])):
-        fig = plt.figure(figsize=(5,5))
+        fig = plt.figure(figsize=(4,4))
         gs = grid_spec.GridSpec(4,1,1)
         res_tmp = res[res[variable]==var]
         ax_objs=[]
@@ -257,15 +257,13 @@ def plot_func(res,out_path,variable,metric):
             for s in spines:
                 ax.spines[s].set_visible(False)
 
-            ax.text(np.min(x),0,'alpha=%.2f\n accuracy=%.2f\n loss=%.2f'%(alpha,acc,loss),fontsize=8,ha="right")
-
         gs.update(hspace=-0.4)
 
         plt.tight_layout()
         name = '%s_%s_%i'%(metric,variable,var)
         plt.savefig(os.path.join(plot_path,name))
 
-
+alphas = [10.  ,  1.  ,  0.1 ,  0.01]
 ######### Res 1 #############################
 res = pd.read_csv(os.path.join(result_path,'res_epochs.csv'))
 for metric in metrics:
@@ -288,7 +286,7 @@ out_path = os.path.join('data','Results','Plots','Distributions')
 metrics = ['ks_test','skew','kurtosis']
 colors = sns.color_palette("ch:s=.25,rot=-.25", n_colors=len(alphas))
 for metric in metrics:
-    fig = plt.figure(figsize=(7.5,7.5))
+    fig = plt.figure(figsize=(6,6))
     gs = grid_spec.GridSpec(len(alphas),1,1)
     ax_objs=[]
     for i,alpha in enumerate(alphas[::-1]):
@@ -321,7 +319,10 @@ for metric in metrics:
         ax.set_yticks([])
 
         if i == len(alphas)-1:
-            ax.set_xlabel(metric, fontsize=8)
+            if metric == 'ks_test':
+                ax.set_xlabel('p-value', fontsize=14)
+            else:
+                ax.set_xlabel(metric, fontsize=14)
         else:
             ax.set_xticklabels([])
             ax.set_xticks([])
@@ -331,6 +332,7 @@ for metric in metrics:
             ax.spines[s].set_visible(False)
 
         ax.text(np.min(x),0,r'$\alpha=$'+'%.3f'%(alpha),fontsize=10,ha="right")
+        ax.grid(False)
 
     gs.update(hspace=-0.5)
 
@@ -342,7 +344,7 @@ for metric in metrics:
 ############## Res 5 #############################
 res = pd.read_csv(os.path.join(result_path,'res_lossacc.csv')).drop('Unnamed: 0',axis=1)
 stats = res.groupby('alpha').aggregate(['mean','std'])
-cols = np.unique([c[0] for c in stats.columns])
+cols = np.unique([c[0] for c in stats.columns])[[0,2,1,3]]
 colors = sns.color_palette("Paired", n_colors=4)
 
 fig,ax = plt.subplots(figsize=(6,6))
@@ -357,11 +359,13 @@ for i,col in enumerate(cols):
     ax_tmp.plot(x,mu,label=col,color=colors[i])
     ax_tmp.fill_between(x,l,u,color=colors[i],alpha=0.3)
 ax.legend(bbox_to_anchor=(1, -0.1),ncol=2,prop={'size': 10})
+ax2.grid(False)
+ax.grid(False)
 ax2.legend(bbox_to_anchor=(0.5, -0.1),ncol=2,prop={'size': 10})
-ax.set_xlabel(r'$\alpha$')
-ax.set_ylabel('Accuracy')
-ax2.set_ylabel('Loss')
+ax.set_xlabel(r'$\alpha$',fontsize=14)
+ax.set_ylabel('Accuracy',fontsize=14)
+ax2.set_ylabel('Loss',fontsize=14)
 ax.set_xscale('log')
 
-plt.savefig(os.path.join(plot_path,'lossacc'))
+plt.savefig(os.path.join(plot_path,'lossandacc'))
 plt.show()
