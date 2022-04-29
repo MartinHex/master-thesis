@@ -72,6 +72,10 @@ class FedKpServer(ProbabilisticServer):
                 self.prior[i] = self.likelihood[i]
                 self.likelihood[i] = gaussian_kde(x,bw_method='silverman')
 
+        # Calculate bandwidths
+        if not self.adaptive:
+            self.bandwidths = self.bandwidth_method(client_weights)*self.bandwidth_scaling
+
         # Mean shift algorithm:
         if self.cluster_mean:
             res_model_w = torch.zeros(self.model_size).to(device)
@@ -159,7 +163,6 @@ class FedKpServer(ProbabilisticServer):
 
     def _mean_shift(self,client_weights,init,tol=1e-6,device=None):
         w_res = init.to(device)
-        if not self.adaptive: self.bandwidths = self.bandwidth_method(client_weights)*self.bandwidth_scaling
         non_fixed_idx = torch.std(client_weights,0).nonzero().flatten()
         for i in range(self.max_iter):
             # Initiate parameters which are to be mean-shifted
@@ -170,7 +173,7 @@ class FedKpServer(ProbabilisticServer):
                 client_w_tmp = client_weights[:,non_fixed_idx]
                 H = self.bandwidth_method(client_w_tmp,x_0=w)*self.bandwidth_scaling
             else:
-                H = self.bandwidths[non_fixed_idx]*self.bandwidth_scaling
+                H = self.bandwidths[non_fixed_idx]
             denominator= torch.zeros(n_nonzeros).to(device)
             numerator = torch.zeros(n_nonzeros).to(device)
             for _,client_w in enumerate(client_weights):
