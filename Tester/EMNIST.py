@@ -132,7 +132,7 @@ fedkppa = FedKpPa(
         server_optimizer = server_optimizer,
         server_lr = server_lr,
         momentum = client_momentum,
-        cluster_mean = False,
+        cluster_mean = True,
         max_iter = 100,
         burnin = burn_in,
         clients_sample_alpha = alpha,
@@ -202,3 +202,5 @@ for alg in alghs:
     )
     out_path = os.path.join(model_dir,'model_%s'%(alg))
     torch.save(alghs[alg].server.get_weights(), out_path)
+    # Free up memory
+    del alg

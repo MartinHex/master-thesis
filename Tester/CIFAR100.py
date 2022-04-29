@@ -16,7 +16,7 @@ import numpy as np
 import os
 
 # General parameters
-iterations = 1
+iterations = 800
 seed = 0
 alpha = 10
 beta = 10
@@ -126,7 +126,7 @@ fedkppa = FedKpPa(
     server_momentum = server_momentum,
     server_lr = server_lr,
     server_optimizer = server_optimizer,
-    cluster_mean=False,
+    cluster_mean=True,
     kernel_function = kernel_function,
     bandwidth = bandwidth,
     burnin=burnin)
@@ -193,3 +193,5 @@ for alg in alghs:
     )
     out_path = os.path.join(model_dir,'model_%s'%(alg))
     torch.save(alghs[alg].server.get_weights(), out_path)
+    # Free up memory
+    del alg
