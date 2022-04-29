@@ -35,10 +35,11 @@ server_lr = 0.5
 client_lr = 0.01
 burn_in = 500
 shrinkage = 0.1
+max_iter = 20
 server_optimizer = 'sgd'
 bandwidth = 'silverman'
 kernel_function = 'epanachnikov'
-alpha = 'inf'
+alpha = 1
 iterations = 1000
 local_epochs = 5
 seed = 0
@@ -93,7 +94,7 @@ fedkp_cluster_mean = FedKp(
         server_lr = server_lr,
         momentum = client_momentum,
         cluster_mean = True,
-        max_iter = 100,
+        max_iter = max_iter,
         clients_sample_alpha = alpha,
         bandwidth = bandwidth,
         kernel_function = kernel_function,
@@ -158,10 +159,10 @@ fedsgld = SGLD(
     )
 
 alghs = {
-    'FedPA':fedpa,
-    'FedAvg':fedavg,
-    'FedKP':fedkp,
+    #'FedPA':fedpa,
+    #'FedAvg':fedavg,
     'FedKP_cluter_mean':fedkp_cluster_mean,
+    'FedKP':fedkp,
     'FedKPPA':fedkppa,
     'SGLD':fedsgld
 }
