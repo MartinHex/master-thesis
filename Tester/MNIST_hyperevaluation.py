@@ -119,17 +119,16 @@ def test_script(rounds,clients_per_rounds,epochs):
 ################# Res 1 ###############################################
 print('----------- Running test epoch test ------------------------')
 rounds = 1
-clients_per_rounds = 10
+clients_per_rounds = 20
 epochs = [1,2,5,10]
 alg_res,dist_res = test_script(rounds=rounds,clients_per_rounds=clients_per_rounds,epochs=epochs)
-b
 alg_res.to_csv(os.path.join(log_path,'alg_res_epochs.csv'))
 dist_res.to_csv(os.path.join(log_path,'dist_res_epochs.csv'))
 
 ################# Res 2 ###############################################
 print('----------- Running n_rounds epoch test ------------------------')
-rounds = [1,2,5,10]
-clients_per_rounds = 10
+rounds = [2,5,10,20]
+clients_per_rounds = 20
 epochs = 1
 alg_res,dist_res = test_script(rounds=rounds,clients_per_rounds=clients_per_rounds,epochs=epochs)
 alg_res.to_csv(os.path.join(log_path,'alg_res_rounds.csv'))
@@ -145,7 +144,6 @@ alg_res.to_csv(os.path.join(log_path,'alg_res_n_clients.csv'))
 dist_res.to_csv(os.path.join(log_path,'dist_res_n_clients.csv'))
 
 #################### Plotting #####################################
-
 
 #################### Dists #################################
 metrics =['skew','kurtosis','ks_test']
