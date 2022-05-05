@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from sklearn.neighbors import KernelDensity
 import matplotlib.gridspec as grid_spec
 import seaborn as sns
+sns.set(font_scale=5)
 import pandas as pd
 import torch
 import numpy as np
@@ -31,6 +32,8 @@ n_clients = 100
 seed = 0
 batch_size = 16
 n_runs = 5
+client_lr = 0.001
+client_momentum = 0.9
 
 # Variables
 device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
@@ -42,14 +45,14 @@ test_data = dl.get_test_dataloader(batch_size)
 print('Creating FedAvg')
 torch.manual_seed(seed)
 np.random.seed(seed)
-fedAvg = FedAvg(dl,Model,batch_size=batch_size,clients_per_round=10)
+fedAvg = FedAvg(dl,Model,batch_size=batch_size,clients_per_round=10,client_lr=client_lr,momentum=client_momentum)
 print('Creating FedKp')
 torch.manual_seed(seed)
 np.random.seed(seed)
-fedKp = FedKp(dl,Model,batch_size=batch_size,cluster_mean=False,clients_per_round=10)
+fedKp = FedKp(dl,Model,batch_size=batch_size,cluster_mean=False,clients_per_round=10,client_lr=client_lr,momentum=client_momentum)
 torch.manual_seed(seed)
 np.random.seed(seed)
-fedKp_clstr = FedKp(dl,Model,batch_size=batch_size,cluster_mean=True,clients_per_round=10)
+fedKp_clstr = FedKp(dl,Model,batch_size=batch_size,cluster_mean=True,clients_per_round=10,client_lr=client_lr,momentum=client_momentum)
 
 alghs = {
     'FedAvg':fedAvg,
@@ -156,75 +159,22 @@ for ax in axs:
 
 plt.savefig(os.path.join(plot_path,'legend.png'))
 
-def plot_func(res,out_path,variable,metric):
-    for j,var in enumerate(np.unique(res[variable])):
-        fig = plt.figure(figsize=(4,4))
-        gs = grid_spec.GridSpec(4,1,1)
-        res_tmp = res[res[variable]==var]
-        ax_objs=[]
-        for i,alpha in enumerate(alphas[::-1]):
-            ax_objs.append(fig.add_subplot(gs[i:i+1, 0:]))
-            ax = ax_objs[-1]
-            res_tmp2 = res_tmp[res_tmp['alpha'] == alpha]
-            x = np.array(res_tmp2[metric])
-            acc = float(np.array(res_tmp2['val_acc'])[0].split('(')[-1][:-1])
-            loss = np.array(res_tmp2['val_loss'])[0]
-            x_d = np.linspace(np.min(x),np.max(x), 1000)
+res_variable = ['loss', 'acc']
 
-            kde = KernelDensity(bandwidth=0.03, kernel='gaussian')
-            kde.fit(x[:, None])
+for f in os.listdir(log_path):
+    parameter = f[8:-4]
+    if parameter=='n_clients': parameter='clients_per_round'
+    out_path = os.path.join(plot_path,parameter)
+    if not os.path.exists(out_path): os.mkdir(out_path)
+    res = pd.read_csv(os.path.join(path,f))
+    for y in res_variable:
+        res_tmp = res.melt(id_vars=['alpha',parameter,'algorithm'],
+                            value_vars=['train_%s'%y,'val_%s'%y],value_name=y)
+        res_tmp['algorithm'] = res_tmp['algorithm']  +' ' +  res_tmp['variable']
+        res_tmp.sort_values('algorithm',inplace=True)
 
-            logprob = kde.score_samples(x_d[:, None])
-
-            # plotting the distribution
-            ax.plot(x_d, np.exp(logprob),color="white",lw=1)
-            ax.fill_between(x_d, np.exp(logprob), alpha=1,color=colors[i])
-
-
-            # setting uniform x and y lims
-            ax.set_xlim(np.min(x),np.max(x))
-
-            # make background transparent
-            rect = ax.patch
-            rect.set_alpha(0)
-
-            # remove borders, axis ticks, and labels
-            ax.set_yticklabels([])
-            ax.set_yticks([])
-
-            if i == len(alphas)-1:
-                ax.set_xlabel(metric, fontsize=8)
-            else:
-                ax.set_xticklabels([])
-                ax.set_xticks([])
-
-            spines = ["top","right","left","bottom"]
-            for s in spines:
-                ax.spines[s].set_visible(False)
-
-        gs.update(hspace=-0.4)
-
-        plt.tight_layout()
-        name = '%s_%s_%i'%(metric,variable,var)
-        plt.savefig(os.path.join(plot_path,name))
-
-######### Res 1 #############################
-res = pd.read_csv(os.path.join(result_path,'res_epochs.csv'))
-res_plt_path = os.path.join(plot_path,'epochs')
-if not os.path.exists(res_plt_path): os.mkdir(res_plt_path)
-for metric in metrics:
-    plot_func(res,out_path,'epochs',metric)
-
-######### Res 2 #############################
-res = pd.read_csv(os.path.join(result_path,'res_rounds.csv'))
-res_plt_path = os.path.join(plot_path,'n_rounds')
-if not os.path.exists(res_plt_path): os.mkdir(res_plt_path)
-for metric in metrics:
-    plot_func(res,out_path,'rounds',metric)
-
-######### Res 3 #############################
-res = pd.read_csv(os.path.join(result_path,'res_n_clients.csv'))
-res_plt_path = os.path.join(plot_path,'epochs')
-if not os.path.exists(res_plt_path): os.mkdir(res_plt_path)
-for metric in metrics:
-    plot_func(res,out_path,'n_clients',metric)
+        fig, ax = plt.subplots(figsize=(16,4))
+        g = sns.catplot(x='alpha',y=y,hue='algorithm',data=res_tmp,capsize=.01,col=parameter,kind='bar',palette='Paired')
+        if y=='loss': g.set(yscale="log")
+        plt.savefig(os.path.join(out_path,y))
+        plt.clf()
