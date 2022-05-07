@@ -15,9 +15,10 @@ import os
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 from tqdm import tqdm
+from Algorithms.FedAvg import FedAvg as Alg
 
 # Specify out_path
-out_path  = os.path.join('data','Results','MNIST','Hyperparameter_evaluation')
+out_path  = os.path.join('data','Results','MNIST','Normality')
 log_path = os.path.join(out_path,'results')
 plot_path = os.path.join(out_path,'plots')
 if not os.path.exists(out_path): os.mkdir(out_path)
@@ -35,15 +36,6 @@ device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
 # Initiate test data before running everything
 dl = Dataloader(n_clients)
 test_data = dl.get_test_dataloader(batch_size)
-
-# Initiate Algorithms
-print('Creating FedAvg')
-torch.manual_seed(seed)
-np.random.seed(seed)
-fedAvg = FedAvg(dl,Model,batch_size=batch_size,clients_per_round=10)
-
-# Initial Model
-torch.set
 
 # script
 def test_script(rounds,clients_per_rounds,epochs):
@@ -66,7 +58,7 @@ def test_script(rounds,clients_per_rounds,epochs):
         dl = Dataloader(n_clients,alpha=alpha)
         for round,clients_per_round,epoch in zip(rounds,clients_per_rounds,epochs):
             # Train algorithm
-            alg = ALG(dl,Model,batch_size=batch_size,clients_per_round=clients_per_round)
+            alg = Alg(dl,Model,batch_size=batch_size,clients_per_round=clients_per_round)
             alg.server.model.set_weights(init_model.get_weights())
             alg.run(round,epochs=epoch,callbacks=callbacks,device=device,log_callbacks=False)
 

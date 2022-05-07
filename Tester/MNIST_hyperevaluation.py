@@ -114,23 +114,23 @@ def test_script(rounds,clients_per_rounds,epochs):
 
 ################# Res 1 ###############################################
 print('----------- Running test epoch test ------------------------')
-rounds = 1
+rounds = 10
 clients_per_rounds = 20
 epochs = [1,2,5,10]
 alg_res = test_script(rounds=rounds,clients_per_rounds=clients_per_rounds,epochs=epochs)
 alg_res.to_csv(os.path.join(log_path,'alg_res_epochs.csv'))
 
 ################# Res 2 ###############################################
-print('----------- Running n_rounds epoch test ------------------------')
-rounds = [2,5,10,20]
-clients_per_rounds = 20
-epochs = 5
-alg_res = test_script(rounds=rounds,clients_per_rounds=clients_per_rounds,epochs=epochs)
-alg_res.to_csv(os.path.join(log_path,'alg_res_rounds.csv'))
+# print('----------- Running n_rounds epoch test ------------------------')
+# rounds = [2,5,10,20]
+# clients_per_rounds = 20
+# epochs = 5
+# alg_res = test_script(rounds=rounds,clients_per_rounds=clients_per_rounds,epochs=epochs)
+# alg_res.to_csv(os.path.join(log_path,'alg_res_rounds.csv'))
 
 ################# Res 3 ###############################################
 print('----------- Running n_clients epoch test ------------------------')
-rounds = 1
+rounds = 10
 clients_per_rounds = [5,10,50,100]
 epochs = 5
 alg_res = test_script(rounds=rounds,clients_per_rounds=clients_per_rounds,epochs=epochs)

@@ -16,10 +16,11 @@ from random import sample
 
 # Parameters
 cluster_mean = False
-alpha=0.1
-number_of_clients = 200
+loc_epochs = 5
+alpha=0.01
+number_of_clients = 100
 clients_per_round = 20
-bandwidth_methods = ['silverman','local','plugin','crossval']
+bandwidth_methods = []#['silverman','local','plugin','crossval']
 batch_size = 16
 hs = torch.logspace(-2,1,20)
 cv = 5
@@ -74,12 +75,12 @@ for bandwidth_selection in bandwidth_methods:
         print('------------------- Round %i --------------------------'%i)
         print('setting up initial model')
         init_Model = Model()
-        clients = [Client(Model(),dl, learning_rate = 0.001,momentum=0.9) for dl in sample(train_dls,clients_per_round)]
+        clients = [Client(Model(),dl, learning_rate = 0.01,momentum=0.9) for dl in sample(train_dls,clients_per_round)]
         # train Clients
         print('Training clients')
         for client in tqdm(clients):
             client.set_weights(init_Model.get_weights())
-            client.train()
+            client.train(loc_epochs)
 
         print('Evaluating FedAvg')
         fedAvg.aggregate(clients)
