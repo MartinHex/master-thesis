@@ -9,6 +9,7 @@ from Algorithms.FedKpPa import FedKpPa
 from Algorithms.FedPa import FedPa
 from Algorithms.FedKp import FedKp
 from Algorithms.SGLD import SGLD
+from Algorithms.FedProx import FedProx
 # Additional imports
 from Models.Callbacks.Callbacks import Callbacks
 import torch
@@ -33,6 +34,7 @@ server_momentum = 0.9
 momentum = 0.9
 shrinkage = 0.01
 burnin = 400
+mu = 0.01
 bandwidth = 'silverman'
 kernel_function = 'epanachnikov'
 
@@ -62,6 +64,21 @@ fedavg = FedAvg(
     server_momentum = server_momentum,
     server_lr = server_lr,
     server_optimizer = server_optimizer)
+
+print('Creating FedProx')
+torch.manual_seed(seed)
+np.random.seed(seed)
+fedprox = FedProx(
+    dataloader=dataloader,
+    Model=Model,
+    clients_per_round = clients_per_round,
+    client_lr = client_lr,
+     momentum = momentum,
+    batch_size=batch_size,
+    server_momentum = server_momentum,
+    server_lr = server_lr,
+    server_optimizer = server_optimizer
+    mu = mu)
 
 print('Creating FedPA')
 torch.manual_seed(seed)
@@ -153,6 +170,7 @@ alghs = {
     'FedKp_cluster_mean':fedkp_cluster_mean,
     'FedKpPa':fedkppa,
     'SGLD':fedsgld,
+    'FedProx': fedprox,
 }
 
 print('Setting up save paths')

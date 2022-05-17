@@ -9,6 +9,7 @@ from Algorithms.FedKpPa import FedKpPa
 from Algorithms.FedPa import FedPa
 from Algorithms.FedKp import FedKp
 from Algorithms.SGLD import SGLD
+from Algorithms.FedProx import FedProx
 # Additional imports
 from Models.Callbacks.Callbacks import Callbacks
 import torch
@@ -43,6 +44,7 @@ alpha = 1
 iterations = 1000
 local_epochs = 5
 seed = 0
+mu = 1
 
 # Initiate algorithms with same parameters as in papers.
 # Set parameters to replicate paper results
@@ -80,6 +82,22 @@ fedavg = FedAvg(
         clients_sample_alpha = alpha,
     )
 
+print('Creating FedProx')
+torch.manual_seed(seed)
+np.random.seed(seed)
+fedprox = FedProx(
+        dataloader=dataloader,
+        Model=Model,
+        clients_per_round = clients_per_round,
+        client_lr = client_lr,
+        batch_size = batch_size,
+        server_momentum = server_momentum,
+        server_optimizer = server_optimizer,
+        server_lr = server_lr,
+        momentum = client_momentum,
+        clients_sample_alpha = alpha,
+        mu = mu,
+    )
 print('Creating FedKP')
 torch.manual_seed(seed)
 np.random.seed(seed)
@@ -159,12 +177,13 @@ fedsgld = SGLD(
     )
 
 alghs = {
-    #'FedPA':fedpa,
-    #'FedAvg':fedavg,
+    'FedPA':fedpa,
+    'FedAvg':fedavg,
     'FedKP_cluter_mean':fedkp_cluster_mean,
     'FedKP':fedkp,
     'FedKPPA':fedkppa,
-    'SGLD':fedsgld
+    'SGLD':fedsgld,
+    'FedProx': fedprox,
 }
 
 print('Setting up save paths')

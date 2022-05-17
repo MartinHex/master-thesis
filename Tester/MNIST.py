@@ -9,6 +9,7 @@ from Algorithms.FedKpPa import FedKpPa
 from Algorithms.FedPa import FedPa
 from Algorithms.FedKp import FedKp
 from Algorithms.SGLD import SGLD
+from Algorithms.FedProx import FedProx
 # Additional imports
 from Models.Callbacks.Callbacks import Callbacks
 import torch
@@ -33,16 +34,13 @@ kernel_function = 'epanachnikov'
 iterations = 50
 local_epochs = 5
 seed = 0
+mu = 0.1
 
 
 for alpha in alphas:
     dataloader = Dataloader(number_of_clients,alpha=alpha)
     test_data = dataloader.get_test_dataloader(batch_size)
     device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
-
-    # Create callback functions that are run at the end of every round
-    cbs = Callbacks(test_data, device = device, verbose = True)
-    callbacks = [cbs.server_loss, cbs.server_accuracy]
 
     # Create callback functions that are run at the end of every round
     print('Creating Callbacks')
@@ -166,13 +164,31 @@ for alpha in alphas:
             clients_sample_alpha = alpha,
         )
 
+    print('Creating FedProx')
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    fedprox = FedProx(
+            dataloader=dataloader,
+            Model=Model,
+            clients_per_round = clients_per_round,
+            client_lr = client_lr,
+            batch_size = batch_size,
+            server_momentum = server_momentum,
+            server_optimizer = server_optimizer,
+            server_lr = server_lr,
+            momentum = client_momentum,
+            clients_sample_alpha = alpha,
+            mu  = mu,
+        )
+
     alghs = {
         'FedPA':fedpa,
         'FedAvg':fedavg,
         'FedKP_cluter_mean':fedkp_cluster_mean,
         'FedKP':fedkp,
         'FedKPPA':fedkppa,
-        'SGLD':fedsgld
+        'SGLD':fedsgld,
+        'FedProx': fedprox,
     }
 
     print('Setting up save paths')
