@@ -29,9 +29,12 @@ class FedProxClient(SGDClient):
     def _prox_loss(self, output, target):
         cce_loss = CrossEntropyLoss()
         loss = cce_loss(output, target)
-        for w_0, w_t in zip(self.global_model.parameters(), self.model.parameters()):
+        device = output.get_device()
+        global_model = self.global_model.to(device)
+        current_model = self.model.to(device)
+        for w_0, w_t in zip(global_model.parameters(), current_model.parameters()):
             w_0.requires_grad = False
             w_t.requires_grad = True
-            prox_term = (self.mu / 2) * (w_0.sub(w_t)).norm(2)
+            prox_term = (self.mu / 2) * (w_0.to(device).sub(w_t.to(device))).norm(2)
             loss.add_(prox_term)
         return loss

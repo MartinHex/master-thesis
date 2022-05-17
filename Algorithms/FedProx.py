@@ -18,7 +18,6 @@ class FedProx(Algorithm):
                 server_momentum=1,
                 clients_sample_alpha = 'inf',
                 seed=1234,
-                adaptive_epochs = None,
                 mu = 0,
                 ):
 
@@ -43,7 +42,7 @@ class FedProx(Algorithm):
 
         super().__init__(server, client_dataloaders,client_generator=client_generator,
                         clients_per_round=clients_per_round,seed=seed,
-                         clients_sample_alpha = clients_sample_alpha, adaptive_epochs = adaptive_epochs)
+                         clients_sample_alpha = clients_sample_alpha)
 
     def _create_client(self,dataloader,round=0,i=0):
         return self.init_client(dataloader)
