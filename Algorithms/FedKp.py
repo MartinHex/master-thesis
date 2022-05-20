@@ -17,7 +17,7 @@ class FedKp(Algorithm):
             bandwidth = 'silverman',
             server_optimizer='none',
             server_lr=1,
-            tau=0.1,
+            tau=0.,
             b1=.9,
             b2=0.99,
             server_momentum=1,

@@ -14,5 +14,5 @@ class SGD(server_optimizer):
         for key in grad:
             grad_new[key]= self.momentum*self.b_t[key]+(1-self.tau)*grad[key]
             self.b_t[key] = grad_new[key].detach().clone()
-            grad_new[key]=self.lr*grad[key]
+            grad_new[key]=self.lr*grad_new[key]
         return grad_new
