@@ -2,7 +2,7 @@ from Servers.optimizers.server_optimizer import server_optimizer
 from collections import defaultdict
 import torch
 
-class Adam(server_optimizer):
+class Yogi(server_optimizer):
     def __init__(self,lr=1,tau=0.0001,b1=0.9,b2=0.999):
         super().__init__()
         self.lr = lr
@@ -16,6 +16,7 @@ class Adam(server_optimizer):
         grad_new = {}
         for key in grad:
             self.m[key] = self.b1 * self.m[key] + (1-self.b1) * grad[key]
-            self.v[key] = self.b2 * self.v[key] + (1-self.b2) * torch.square(grad[key])
+            v_square = torch.square(grad[key])
+            self.v[key] = self.v[key] - (1-self.b2) * v_square * torch.sign(self.v[key] - v_square)
             grad_new[key] = self.lr * self.m[key].div(torch.sqrt(self.v[key])+self.tau)
         return grad_new
