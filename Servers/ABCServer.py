@@ -1,6 +1,7 @@
 from abc import ABC,abstractmethod
 from Servers.optimizers.adam import Adam
 from Servers.optimizers.sgd import SGD
+from Servers.optimizers.yogi import Yogi
 from torch import nn
 import torch
 
@@ -12,6 +13,8 @@ class ABCServer(ABC):
             self.optimizer= SGD(lr=lr,momentum=momentum,tau=tau)
         elif optimizer == 'adam':
             self.optimizer= Adam(lr=lr,tau=tau,b1=b1,b2=b2)
+        elif optimizer == 'yogi':
+            self.optimizer= Yogi(lr=lr,tau=tau,b1=b1,b2=b2)
         else:
             self.optimizer= None
 
