@@ -2,11 +2,11 @@ from torch import nn
 from torchvision.models import resnet
 from Models.nn_Model import nn_Model
 
-class CIFAR_Model(nn_Model):
+class CIFAR100_Model(nn_Model):
     def __init__(self):
         super().__init__()
         number_of_classes = 100
-        self.model = resnet.resnet18(pretrained = False) #, norm_layer=MyGroupNorm)
+        self.model = resnet.resnet18(pretrained = False)#, norm_layer=MyGroupNorm)
         self.model.fc = nn.Linear(512, number_of_classes)
 
 

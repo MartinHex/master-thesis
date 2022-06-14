@@ -9,7 +9,8 @@ class FedAvgServer(ABCServer):
         # Calculate scaling
         if not client_scaling:
             client_scaling = torch.ones(len(client_weights))
-        weights = client_scaling/sum(client_scaling)
+        normalize = sum(client_scaling)
+        weights = [cs/normalize for cs in client_scaling]
 
         # Calculate new weight
         new_weights = torch.zeros(self.model_size).to(device)

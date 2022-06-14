@@ -1,7 +1,7 @@
 import sys
 sys.path.append('.')
 #Import models
-from Models.CIFAR_Model import CIFAR_Model as Model
+from Models.CIFAR10_Model import CIFAR10_Model as Model
 from Dataloaders.CIFAR10 import CIFAR10 as Dataloader
 # Import Algorithms
 from Algorithms.FedAvg import FedAvg
@@ -16,7 +16,7 @@ import os
 # General parameters
 iterations = 100
 seed = 0
-alpha = 10
+alpha = 0.1
 # Dataloader hyperparameters
 local_epochs = 20
 number_of_clients = 500
@@ -26,12 +26,14 @@ batch_size = 10
 server_optimizer = 'sgd'
 server_momentum = 0.0
 momentum = 0.9
+client_lr = 10**(-1/2)
+server_lr = 10**(0)
 
 # Mean shifts used
 meanshifts = ['','client-shift','mean-shift']
 
 
-dataloader = Dataloader(number_of_clients,alpha=alpha,beta=beta,seed=seed)
+dataloader = Dataloader(number_of_clients,alpha=alpha,seed=seed)
 test_data = dataloader.get_test_dataloader(300)
 device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
 
@@ -50,8 +52,8 @@ fedavg = FedAvg(
     dataloader=dataloader,
     Model=Model,
     clients_per_round = clients_per_round,
-    client_lr = 10**(-1/2),
-    server_lr = 10**(0),
+    client_lr = client_lr,
+    server_lr = server_lr,
     momentum = momentum,
     batch_size=batch_size,
     server_momentum = server_momentum,
@@ -99,12 +101,12 @@ fedprox = FedProx(
     dataloader=dataloader,
     Model=Model,
     clients_per_round = clients_per_round,
-    client_lr = 10**(-1/2),
-    server_lr = 10**(0),
+    client_lr = client_lr,
+    server_lr = server_lr,
     momentum = momentum,
     batch_size=batch_size,
     server_momentum = server_momentum,
-    server_optimizer = server_optimizer
+    server_optimizer = server_optimizer,
     mu = 0.01)
 
 print('Creating FedPA')
@@ -114,10 +116,10 @@ fedpa= FedPa(
     dataloader=dataloader,
     Model=Model,
     clients_per_round = clients_per_round,
-    client_lr = 10**(-1/2),
-    server_lr = 10**(0),
-    shrinkage = 0.01
-    burnin = 400
+    client_lr = client_lr,
+    server_lr = server_lr,
+    shrinkage = 0.01,
+    burnin = 50,
     batch_size=batch_size,
     server_momentum = server_momentum,
     server_optimizer = 'sgd',
@@ -125,7 +127,7 @@ fedpa= FedPa(
 
 alghs = {
     'FedAvg':fedavg,
-    'FedAdam':FedAdam,
+    'FedAdam':fedadam,
     'FedYoGi':fedyogi,
     'FedProx': fedprox,
     'FedPA':fedpa

@@ -2,6 +2,7 @@ from Dataloaders.federated_dataloader import FederatedDataLoader
 import torchvision
 import numpy as np
 import torch
+import torchvision.transforms as tt
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from collections import defaultdict
@@ -26,9 +27,9 @@ class CIFAR10(FederatedDataLoader):
         # Precalculated means and variance of training data
         mean = torch.tensor([0.4914, 0.4822, 0.4465])
         std = torch.tensor([0.2470, 0.2435, 0.2616])
-        self.transform = torchvision.transforms.Compose(
-            [torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize(mean, std)
+        self.transform = tt.Compose(
+            [tt.ToTensor(),
+            tt.Normalize(mean, std)
             ])
         self.alpha = alpha
         np.random.seed(seed = seed)
@@ -57,12 +58,34 @@ class CIFAR10(FederatedDataLoader):
         self.split_trainset = self._create_trainset()
 
     def get_training_dataloaders(self, batch_size, shuffle = True):
-        dataloaders = []
+        """Get a list of dataloaders containing partitioned training data from the CIFAR10 dataset
+
+        Args:
+            batch_size: batch_size for the dataloaders (int).
+            shuffle: whether to shuffle the data (Boolean).
+        Returns:
+            List of dataloaders with data in format (Tensor, int).
+        """
+        datasets = []
+        transform = tt.Compose([tt.RandomCrop(24),
+                        tt.RandomHorizontalFlip(p=0.5)])
         for client in self.split_trainset:
-            dataloaders.append(DataLoader(ImageDataset(client), batch_size = batch_size, shuffle = shuffle))
+            datasets.append(ImageDataset(client, transform = transform))
+        dataloaders = []
+        for dataset in datasets:
+            dataloaders.append(DataLoader(dataset, batch_size = batch_size, shuffle = shuffle))
+
         return dataloaders
 
     def get_test_dataloader(self, batch_size):
+        """Get a dataloader containing training data from the CIFAR10 dataset
+
+        Args:
+            batch_size: batch_size for the dataloaders (int).
+            label: whether to use the coarse or fine label in the CIFAR100 dataset (fine/coarse)
+        Returns:
+            Dataloader with data in format (Tensor, int).
+        """
         return DataLoader(ImageDataset(self.testset), batch_size = batch_size, shuffle = False)
 
     def get_training_raw_data(self):
@@ -126,14 +149,43 @@ class CIFAR10(FederatedDataLoader):
             self.mapped_testset[key] = self.mapped_testset[key][0:train_class_size]
         return train_class_size * 10
 
+    def _create_trainset(self):
+        client_list = [[] for i in range(self.number_of_clients)]
+        if self.alpha == 'inf':
+            for client in client_list:
+                for label in self.mapped_trainset:
+                    for i in range(self.train_data_amount // (10 * self.number_of_clients)):
+                        tensor = self.mapped_trainset[label].pop()
+                        client.append((tensor, label))
+        else:
+            available_labels = [x for x in range(10)]
+            number_of_samples = self.train_data_amount // self.number_of_clients
+            for client in range(self.number_of_clients):
+                theta = np.random.dirichlet([self.alpha] * len(available_labels))
+                for i in range(number_of_samples):
+                    index = np.nonzero(np.random.multinomial(1, theta, size = 1))[1][0]
+                    label = available_labels[index]
+                    tensor = self.mapped_trainset[label].pop()
+                    client_list[client].append((
+                        tensor,
+                        label,
+                    ))
+                    if (len(self.mapped_trainset[label]) == 0):
+                        available_labels.remove(label)
+                        theta = np.delete(theta, index)
+                        self._renormalize(theta)
+        return client_list
+
+
 class ImageDataset(Dataset):
     """Constructor
 
     Args:
         data: list of data for the dataset.
     """
-    def __init__(self, data):
+    def __init__(self, data, transform = None):
         self.data = data
+        self.transform = transform
 
     def __getitem__(self, index):
         """Get sample by index
@@ -145,6 +197,7 @@ class ImageDataset(Dataset):
              The index'th sample (Tensor, int)
         """
         tensor, label = self.data[index]
+        if self.transform != None: tensor = self.transform(tensor)
         return tensor, label
 
     def __len__(self):

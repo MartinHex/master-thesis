@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from Dataloaders.federated_dataloader import FederatedDataLoader
 
-class DirichletCifar100(FederatedDataLoader):
+class CIFAR100(FederatedDataLoader):
     '''Federated wrapper class for the Torchvision CIFAR100 dataset
 
         Use a heirichical Dirichlet sampling to sample natural clients of the CIFAR-100 dataset, as proposed
@@ -110,7 +110,8 @@ class DirichletCifar100(FederatedDataLoader):
             List of dataloaders with data in format (Tensor, int).
         """
         datasets = []
-        transform = tt.RandomCrop(24)
+        transform = tt.Compose([tt.RandomCrop(24),
+                        RandomHorizontalFlip(p=0.5)])
         for client in self.split_trainset:
             datasets.append(ImageDataset(client, label, transform = transform))
         dataloaders = []
