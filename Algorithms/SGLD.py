@@ -48,7 +48,8 @@ class SGLD(Algorithm):
             tau=tau,
             b1=b1,
             b2=b2,
-            momentum = server_momentum
+            momentum = server_momentum,
+            meanshift=None
             )
 
         super().__init__(

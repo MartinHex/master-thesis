@@ -9,14 +9,12 @@ class Yogi(server_optimizer):
         self.tau = tau
         self.b1 = b1
         self.b2 = b2
-        self.v = defaultdict(lambda:0)
-        self.m = defaultdict(lambda:0)
+        self.v = 0
+        self.m = 0
 
     def get_grad(self,grad):
-        grad_new = {}
-        for key in grad:
-            self.m[key] = self.b1 * self.m[key] + (1-self.b1) * grad[key]
-            v_square = torch.square(grad[key])
-            self.v[key] = self.v[key] - (1-self.b2) * v_square * torch.sign(self.v[key] - v_square)
-            grad_new[key] = self.lr * self.m[key].div(torch.sqrt(self.v[key])+self.tau)
+        self.m = self.b1 * self.m + (1-self.b1) * grad
+        v_square = torch.square(grad)
+        self.v = self.v - (1-self.b2) * v_square * torch.sign(self.v - v_square)
+        grad_new = self.lr * self.m.div(torch.sqrt(self.v)+self.tau)
         return grad_new

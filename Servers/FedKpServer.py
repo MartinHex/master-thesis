@@ -10,17 +10,12 @@ from KDEpy.bw_selection import improved_sheather_jones
 
 class FedKpServer(ProbabilisticServer):
     def __init__(self,model,shrinkage=1,store_distributions = False,cluster_mean=True,
-                bandwidth = 'silverman',lr=1,tau=0.1,b1=.9,b2=0.99,momentum=1,
+                bandwidth = 'silverman',lr=1,tau=0.1,b1=.9,b2=0.99,momentum=1,meanshift=None,
                 optimizer='none',max_iter=100,bandwidth_scaling=1, kernel_function = 'epanachnikov'):
 
         super().__init__(model,optimizer = optimizer,lr=lr,tau=tau,b1=b1,b2=b2,momentum=momentum)
         super().__init__(model)
-        w = model.get_weights()
-        self.layers = list(w)
-        # Set tensorlengths for future reconstruction of flattening.
-        self.layer_size = [len(w[k].flatten()) for k in w]
-        self.model_size = sum(self.layer_size)
-        self.layer_shapes = [w[k].size() for k in w]
+
         self.store_distributions = store_distributions
         self.max_iter=max_iter
         self.cluster_mean = cluster_mean
@@ -59,10 +54,7 @@ class FedKpServer(ProbabilisticServer):
         self.beta = shrinkage
         self.shrinkage = shrinkage
 
-    def combine(self, clients,device=None, client_scaling = None):
-        # List and translate data into numpy matrix
-        client_weights = [self._model_weight_to_array(c.get_weights()) for c in clients]
-        client_weights = torch.stack(client_weights).to(device)
+    def combine(self, client_weights,device=None, client_scaling = None):
 
         # Kernel Esstimation
         if self.store_distributions:
@@ -87,8 +79,7 @@ class FedKpServer(ProbabilisticServer):
             mean_model = torch.mean(client_weights,0)
             res_model_w = self._mean_shift(client_weights,mean_model,device=device)
 
-        res_model = self._array_to_model_weight(res_model_w.to('cpu'))
-        return res_model
+        return res_model_w
 
     def sample_model(self):
         if(self.store_distributions):

@@ -6,13 +6,11 @@ class SGD(server_optimizer):
         super().__init__()
         self.tau = tau
         self.momentum = momentum
-        self.b_t = defaultdict(lambda: 0)
+        self.b_t = 0
         self.lr = lr
 
     def get_grad(self,grad):
-        grad_new = {}
-        for key in grad:
-            grad_new[key]= self.momentum*self.b_t[key]+(1-self.tau)*grad[key]
-            self.b_t[key] = grad_new[key].detach().clone()
-            grad_new[key]=self.lr*grad_new[key]
+        grad_new= self.momentum*self.b_t+(1-self.tau)*grad
+        self.b_t = grad_new.detach().clone()
+        grad_new=self.lr*grad_new
         return grad_new

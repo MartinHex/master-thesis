@@ -4,20 +4,16 @@ import torch
 
 class FedAvgServer(ABCServer):
 
-    def combine(self, clients, device = None, client_scaling = None):
+    def combine(self, client_weights, device = None, client_scaling = None):
 
         # Calculate scaling
-        if client_scaling:
-            normalizing = sum(client_scaling)
-        else:
-            normalizing = len(clients)
-            client_scaling = torch.ones(normalizing)
+        if not client_scaling:
+            client_scaling = torch.ones(len(client_weights))
+        weights = client_scaling/sum(client_scaling)
 
-        client_weights = [cl.get_weights() for cl in clients]
-        n_clents = len(client_weights)
-        new_weights = defaultdict(lambda:0)
-        for i,cw in enumerate(client_weights):
-            for k in cw:
-                new_weights[k]+=cw[k]/n_clents
+        # Calculate new weight
+        new_weights = torch.zeros(self.model_size).to(device)
+        for client_w,w in zip(client_weights,weights):
+            new_weights += w*client_w
 
         return new_weights

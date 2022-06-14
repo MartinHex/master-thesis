@@ -38,7 +38,8 @@ class FedProx(Algorithm):
                             tau=tau,
                             b1=b1,
                             b2=b2,
-                            momentum=server_momentum)
+                            momentum=server_momentum,
+                            meanshift=None)
 
         super().__init__(server, client_dataloaders,client_generator=client_generator,
                         clients_per_round=clients_per_round,seed=seed,

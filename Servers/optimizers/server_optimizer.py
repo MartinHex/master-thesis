@@ -3,13 +3,9 @@ from abc import ABC,abstractmethod
 class server_optimizer(ABC):
 
     def opt(self,w_new,w_old):
-        grad = {}
-        for k in w_old:
-            grad[k] = w_new[k].sub(w_old[k])
-        grad = self.get_grad(grad)
-        w = {}
-        for k in w_old:
-            w[k] = w_old[k].add(grad[k])
+        grad = w_new.sub(w_old)
+        new_grad = self.get_grad(grad)
+        w =  w_old.add(new_grad)
         return w
 
     @abstractmethod

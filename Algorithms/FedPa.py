@@ -26,7 +26,8 @@ class FedPa(Algorithm):
                 server_momentum=0,
                 burnin=0,
                 clients_sample_alpha = 'inf',
-                seed=1234
+                seed=1234,
+                meanshift=None
                 ):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
@@ -58,6 +59,7 @@ class FedPa(Algorithm):
                             tau=tau,
                             b1=b1,
                             b2=b2,
-                            momentum=server_momentum)
+                            momentum=server_momentum,
+                            meanshift=None)
 
         super().__init__(server, client_dataloaders,client_generator=client_generator,seed=seed,clients_per_round=clients_per_round, clients_sample_alpha = clients_sample_alpha)

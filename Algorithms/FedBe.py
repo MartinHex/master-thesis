@@ -25,6 +25,7 @@ class FedBe(Algorithm):
                 server_momentum=0,
                 clients_sample_alpha = 'inf',
                 seed=1234,
+                meanshift=None
                 ):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size=batch_size)
@@ -65,6 +66,7 @@ class FedBe(Algorithm):
                             tau=tau,
                             b1=b1,
                             b2=b2,
-                            momentum=server_momentum)
+                            momentum=server_momentum,
+                            meanshift=None)
 
         super().__init__(server, client_dataloaders_adj,client_generator=client_generator,clients_per_round=clients_per_round,seed=seed, clients_sample_alpha = clients_sample_alpha)

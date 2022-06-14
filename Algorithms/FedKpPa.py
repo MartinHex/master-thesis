@@ -26,7 +26,8 @@ class FedKpPa(Algorithm):
             clients_sample_alpha = 'inf',
             max_iter=100,
             seed=1234,
-            burnin=0
+            burnin=0,
+            meanshift=None
             ):
 
         client_dataloaders = dataloader.get_training_dataloaders(batch_size)
@@ -61,6 +62,7 @@ class FedKpPa(Algorithm):
                             b1=b1,
                             b2=b2,
                             momentum=server_momentum,
-                            max_iter=max_iter)
+                            max_iter=max_iter,
+                            meanshift=None)
 
         super().__init__(server, client_dataloaders,client_generator=client_generator,clients_per_round=clients_per_round,seed=seed, clients_sample_alpha = clients_sample_alpha)
