@@ -18,16 +18,16 @@ iterations = 100
 seed = 0
 alpha = 0.1
 # Dataloader hyperparameters
-local_epochs = 20
+local_epochs = 10
 number_of_clients = 500
 clients_per_round = 20
-batch_size = 10
+batch_size = 20
 # Training hyperparameters
 server_optimizer = 'sgd'
 server_momentum = 0.0
 momentum = 0.9
 client_lr = 10**(-1/2)
-server_lr = 10**(0)
+server_lr = 10**(-1/2)
 
 # Mean shifts used
 meanshifts = ['','client-shift','mean-shift']
