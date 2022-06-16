@@ -111,7 +111,7 @@ class CIFAR100(FederatedDataLoader):
         """
         datasets = []
         transform = tt.Compose([tt.RandomCrop(24),
-                        RandomHorizontalFlip(p=0.5)])
+                        tt.RandomHorizontalFlip(p=0.5)])
         for client in self.split_trainset:
             datasets.append(ImageDataset(client, label, transform = transform))
         dataloaders = []
