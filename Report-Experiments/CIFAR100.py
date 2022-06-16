@@ -1,7 +1,7 @@
 import sys
 sys.path.append('.')
 #Import models
-from Models.CIFAR_Model import CIFAR_Model as Model
+from Models.CIFAR100_Model import CIFAR100_Model as Model
 from Dataloaders.CIFAR100 import CIFAR100 as Dataloader
 # Import Algorithms
 from Algorithms.FedAvg import FedAvg
