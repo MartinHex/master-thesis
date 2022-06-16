@@ -134,7 +134,7 @@ alghs = {
 }
 
 print('Setting up save paths')
-test_dir = os.path.join('data/ReportResults/CIFAR10')
+test_dir = os.path.join('data/ReportResults/CIFAR100')
 if not os.path.exists(test_dir): os.mkdir(test_dir)
 out_dir = os.path.join(test_dir,'alpha_{}'.format(str(alpha).replace('.', '')))
 if not os.path.exists(out_dir): os.mkdir(out_dir)
