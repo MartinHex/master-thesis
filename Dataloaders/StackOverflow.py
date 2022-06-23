@@ -18,7 +18,7 @@ class StackOverflow(FederatedDataLoader):
     preprocessed data is stored in a data folder.
     This data in json format userComments_{n_entries}_{n_words}.json .
     """
-    def __init__(self, number_of_clients, n_words=20,n_entries=128,seed=0,vocab_size=10000,test_size=0.01):
+    def __init__(self, number_of_clients = 10000, n_words=20,n_entries=128,seed=0,vocab_size=10000,test_size=0.01):
         """Constructor
 
         Args:
@@ -86,14 +86,24 @@ class StackOverflow(FederatedDataLoader):
 
     def get_training_dataloaders(self, batch_size, shuffle = True):
         dataloaders = []
+        non_idx = (
+            self.word_to_index['OoV'],
+            self.word_to_index['Pad'],
+            self.word_to_index['BoS'],
+        )
         for client in self.trainset:
-            dataset = WordSequenceDataset(sequences=client,n_words=20,Oov_idx=self.word_to_index['OoV'])
+            dataset = WordSequenceDataset(sequences=client,n_words=20,non_idx=non_idx)
             dataloader = DataLoader(dataset,batch_size = batch_size, shuffle = shuffle)
             dataloaders.append(dataloader)
         return dataloaders
 
     def get_test_dataloader(self, batch_size):
-        dataset = WordSequenceDataset(sequences=self.testset,n_words=20,Oov_idx=self.word_to_index['OoV'])
+        non_idx = (
+            self.word_to_index['OoV'],
+            self.word_to_index['Pad'],
+            self.word_to_index['BoS'],
+        )
+        dataset = WordSequenceDataset(sequences=self.testset,n_words=20,non_idx=non_idx)
         return DataLoader(dataset,batch_size = batch_size, shuffle = False)
 
     def get_training_raw_data(self):
@@ -120,7 +130,7 @@ class StackOverflow(FederatedDataLoader):
         for i,w in enumerate(cmnt):
             if(w not in self.vocab):
                 res_seq[i] = 'OoV'
-        res_seq = (n_words-2)*['Pad']+['BoS']+res_seq+['EoS']
+        res_seq = (n_words-1)*['Pad']+['BoS']+res_seq+['EoS']
         res_seq = [self.word_to_index[w]for w in res_seq]
         return res_seq
 
@@ -175,23 +185,23 @@ class WordSequenceDataset(Dataset):
     Args:
         data: list of data for the dataset.
     """
-    def __init__(self,sequences,n_words=20,Oov_idx=None):
+    def __init__(self,sequences,n_words=20,non_idx=None):
         self.n_words = n_words
         self.sequences = sequences
         # Set up indexing for dynamically loading different subsets of sentences.
         self.indexing = []
         for i,seq in enumerate(sequences):
-            for j,wrd in enumerate(seq[(n_words-1):-1]):
-                if wrd!=Oov_idx:
-                    self.indexing += [[i,(n_words+j)]]
+            target_indecis = []
+            for j,word in enumerate(seq):
+                if word not in non_idx: self.indexing += [(i, j)]
 
     def __len__(self):
         return len(self.indexing)
 
     def __getitem__(self, index):
         seq,last_word = self.indexing[index]
-        sequence = self.sequences[seq][(last_word-self.n_words):last_word]
+        sequence = self.sequences[seq][(last_word-self.n_words):(last_word + 1)]
         return (
             tensor(sequence[:-1]),
-            tensor(sequence[-1])
+            tensor(sequence[1:])
         )

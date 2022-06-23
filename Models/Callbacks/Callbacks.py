@@ -201,6 +201,7 @@ def _accrecprec(model, dataloader, device):
     targets = []
     loss = 0
     for i, (data, target) in enumerate(dataloader):
+        if len(target.shape) == 2: target = target[:,-1].flatten().long() # NWP case, so we only focus on last prediction
         targets.extend(target.tolist())
         output = model.predict(data, device = device)
         output = output[0].cpu()
@@ -222,6 +223,7 @@ def _model_weight_to_array(w):
 def _accuracy(model, dataloader, device):
     acc = 0
     for data, target in dataloader:
+        if len(target.shape) == 2: target = target[:,-1].flatten().long() # NWP case, so we only focus on last prediction
         output = model.predict(data, device = device)
         output_labels = torch.argmax(output[0], axis = -1).to('cpu')
         acc += torch.sum(output_labels == target)
@@ -231,6 +233,7 @@ def _recall(model, dataloader, device):
     target_true = torch.Tensor()
     target_pred = torch.Tensor()
     for data, target in dataloader:
+        if len(target.shape) == 2: target = target[:,-1].flatten().long() # NWP case, so we only focus on last prediction
         output = model.predict(data, device = device)
         output_labels = torch.argmax(output[0], axis = -1).to('cpu')
         target_true = torch.cat((target_true, target))
@@ -241,6 +244,7 @@ def _precision(model, dataloader, device):
     target_true = torch.Tensor()
     target_pred = torch.Tensor()
     for data, target in dataloader:
+        if len(target.shape) == 2: target = target[:,-1].flatten().long() # NWP case, so we only focus on last prediction
         output = model.predict(data, device = device)
         output_labels = torch.argmax(output[0], axis = -1).to('cpu')
         target_true = torch.cat((target_true, target))
@@ -251,6 +255,7 @@ def _f1(model, dataloader, device):
     target_true = torch.Tensor()
     target_pred = torch.Tensor()
     for data, target in dataloader:
+        if len(target.shape) == 2: target = target[:,-1].flatten().long() # NWP case, so we only focus on last prediction
         output = model.predict(data, device = device)
         output_labels = torch.argmax(output[0], axis = -1).to('cpu')
         target_true = torch.cat((target_true, target))
