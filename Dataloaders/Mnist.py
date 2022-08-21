@@ -7,20 +7,16 @@ from collections import defaultdict
 
 class Mnist(FederatedDataLoader):
     """Federated wrapper class for the Torchvision MNIST dataset
-
     The wrapper trim away data the minimum amount of data needed to make the dataset IID w.r.t. labels and such that it can be split into the number of clients specified.
-
     The class splits the MNIST training data into the desired amount of client with a uniform distribution as default.
     To split the data in a non-IID fashion tune the alpha parameter to do a LDA with dirichlet parameter alpha.
     """
     def __init__(self, number_of_clients,  download = True, alpha = 'inf', seed = 1234):
         """Constructor
-
         Args:
             number_of_clients: how many federated clients to split the data into (int).
             download: whether to allow torchvision to download the dataset (default: True)
             alpha: dirichlet parameter for LDA, default is 'inf' indicating IID split (int)
-
         """
         self.transform = torchvision.transforms.Compose(
             [torchvision.transforms.ToTensor()
@@ -123,7 +119,6 @@ class Mnist(FederatedDataLoader):
 
 class ImageDataset(Dataset):
     """Constructor
-
     Args:
         data: list of data for the dataset.
     """
@@ -132,10 +127,8 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, index):
         """Get sample by index
-
         Args:
             index (int)
-
         Returns:
              The index'th sample (Tensor, int)
         """

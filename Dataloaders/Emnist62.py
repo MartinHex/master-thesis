@@ -10,7 +10,6 @@ import torch
 
 class EMNIST(FederatedDataLoader):
     """Federated wrapper class for the Torchvision EMNIST-62 dataset
-
     Assumes:
         - That the Federated EMNIST-62 (FEMNIST) dataset is present in ../data/femnist.
         - The data is split by using the method presented by Caldas et al. (https://github.com/TalwalkarLab/leaf)
@@ -61,7 +60,6 @@ class EMNIST(FederatedDataLoader):
 
 class ImageDataset(Dataset):
     """Constructor
-
     Args:
         data: list of data for the dataset.
     """
@@ -70,10 +68,8 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, index):
         """Get sample by index
-
         Args:
             index (int)
-
         Returns:
              The index'th sample (Tensor, int)
         """
